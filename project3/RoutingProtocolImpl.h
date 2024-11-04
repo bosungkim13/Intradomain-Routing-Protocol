@@ -36,8 +36,17 @@ class RoutingProtocolImpl : public RoutingProtocol {
     // that the packet is generated locally and not received from 
     // a neighbor router.
 
+    void sendPings();
+    void handlePings(unsigned short port, Packet pingPacket);
+    void handlePongs(unsigned short port, Packet pongPacket);
+    // Send some pings to neighbors
+
  private:
     Node *sys; // To store Node object; used to access GSR9999 interfaces 
+    unsigned short routerID; // Router ID
+    unsigned short numPorts; // Number of ports on the router
+    eProtocolType protocolType; // Protocol type (P_DV or P_LS)
+    unordered_map<port_num, PortStatusEntry> portStatus; // Port status map
 };
 
 #endif
