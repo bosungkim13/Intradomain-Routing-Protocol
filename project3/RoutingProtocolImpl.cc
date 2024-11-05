@@ -56,8 +56,10 @@ void RoutingProtocolImpl::sendPings() {
     packetHeader->packetType = htons(PING); // Set packet type
     packetHeader->size = htons(size); // Set packet size
     packetHeader->sourceID = htons(routerID); // Set source ID
-    // defaults to 0 if not set
-    packetHeader->destID = htons(portStatus[i].destRouterID); // Set destination ID
+
+    // Destination packet is unused in the ping packet, so michael commented this out:
+    // // defaults to 0 if not set
+    // packetHeader->destID = htons(portStatus[i].destRouterID); // Set destination ID
 
     // Serialize
     void *serializedPacket = serializePacket(packet);
@@ -72,6 +74,8 @@ When the neighbor router receives the PING message, it must update the
 received message’s type to PONG, copy the source ID to the destination ID,
 update the source ID to its own, then send the resulting PONG message (with the
 original timestamp still in the payload) immediately back to the neighbor.
+
+'port' is the port from which this packet was received.
 */
 void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.packetType = PONG;
@@ -85,13 +89,19 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
 /*
 When the PONG message is received, the timestamp in the message is compared 
 to the current time to compute the RTT. 
+
+'port' is the port from which this packet was received.
 */
 void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
+  // Calculate RTT
   time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload);
   time_stamp currTimestamp = sys->time();
-
   // assert(prevTimestamp <= currTimestamp);
-
   time_stamp rtt = currTimestamp - prevTimestamp;
-  // TODO: do something with RTT (store or something)
+
+  // Use the PONG packet's source ID to discover the ID of its current neighbor and update that port's information
+  portStatus[port].destRouterID = pongPacket.header.sourceID;
+  portStatus[port].isUp = true;
+  portStatus[port].lastUpdate = currTimestamp;
+  portStatus[port].timeCost = rtt;
 }

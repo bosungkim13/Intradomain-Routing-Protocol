@@ -41,6 +41,10 @@ class RoutingProtocolImpl : public RoutingProtocol {
     void handlePongs(unsigned short port, Packet pongPacket);
     // Send some pings to neighbors
 
+    void updatePortFreshness();
+    // TODO: Implement this method to iterate through ports. Ports that have not received a PONG in the last 15 seconds should have portStatus.isUp set to false.
+    //      (this method will be called every 1 second)
+
  private:
     Node *sys; // To store Node object; used to access GSR9999 interfaces 
     unsigned short routerID; // Router ID

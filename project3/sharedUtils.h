@@ -41,6 +41,6 @@ struct PortStatusEntry {
 };
 
 void* serializePacket(Packet serializeMe);
-Packet deserializePacket(void* deserializeMe)
+Packet deserializePacket(void* deserializeMe);
 
 # endif
