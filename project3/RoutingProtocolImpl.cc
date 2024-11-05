@@ -67,14 +67,31 @@ void RoutingProtocolImpl::sendPings() {
   }
 }
 
+/*
+When the neighbor router receives the PING message, it must update the 
+received message’s type to PONG, copy the source ID to the destination ID,
+update the source ID to its own, then send the resulting PONG message (with the
+original timestamp still in the payload) immediately back to the neighbor.
+*/
 void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.packetType = PONG;
-  time_stamp prevTimestamp = ntohl(*(time_stamp*)pingPacket.payload);
-  time_stamp currTimestamp = sys->time();
+  pingPacket.header.destID = pingPacket.header.sourceID;
+  pingPacket.header.sourceID = this->routerID;
 
-  assert(prevTimestamp <= currTimestamp);
-
-  memcpy(pingPacket.payload, &currTimestamp, sizeof(currTimestamp));
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, sizeof(Packet));
+}
+
+/*
+When the PONG message is received, the timestamp in the message is compared 
+to the current time to compute the RTT. 
+*/
+void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
+  time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload);
+  time_stamp currTimestamp = sys->time();
+
+  // assert(prevTimestamp <= currTimestamp);
+
+  time_stamp rtt = currTimestamp - prevTimestamp;
+  // TODO: do something with RTT (store or something)
 }
