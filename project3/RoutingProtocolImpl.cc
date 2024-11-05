@@ -2,6 +2,7 @@
 #include <global.h>
 #include <sys/time.h>
 #include <sharedUtils.h>
+#include <cassert>
 
 RoutingProtocolImpl::RoutingProtocolImpl(Node *n) : RoutingProtocol(n) {
   sys = n;
@@ -98,10 +99,48 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   time_stamp currTimestamp = sys->time();
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
+  std::cout << "handlePongs(): RTT = " << rtt << std::endl;
 
   // Use the PONG packet's source ID to discover the ID of its current neighbor and update that port's information
   portStatus[port].destRouterID = pongPacket.header.sourceID;
+  bool wasUp = portStatus[port].isUp;
   portStatus[port].isUp = true;
   portStatus[port].lastUpdate = currTimestamp;
   portStatus[port].timeCost = rtt;
+
+  // check if we have connected before
+  if (adjacencyList.count(pongPacket.header.sourceID) && wasUp) {
+    // If the neighbor is already in the adjacency list, update the time cost
+    adjacencyList[pongPacket.header.sourceID].port = port;
+    cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;
+    adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
+    std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
+    std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
+
+    if (adjacencyList[pongPacket.header.sourceID].timeCost != oldTimeCost) {
+      // Time cost has changed
+
+      if (protocolType == P_LS) {
+          // for link state routing protocol, we need to update since cost changes
+          myLSRP->updateTable();
+          // send updates to all neighbors
+          myLSRP->sendUpdates();
+      }
+
+    } else {
+      // Time cost has not changed
+      adjacencyList[pongPacket.header.sourceID]= Neighbor(port, rtt);
+
+      if (protocolType == P_LS) {
+        myLSRP->updateTable();
+        myLSRP->sendUpdates();
+      }
+
+      // Update the forwarding table? Should alwasy be the same
+      assert(forwardingTable[port] == pongPacket.header.sourceID);
+      forwardingTable[port] = pongPacket.header.sourceID;
+
+    }
+
+  }
 }

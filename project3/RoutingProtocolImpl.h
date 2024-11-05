@@ -51,6 +51,8 @@ class RoutingProtocolImpl : public RoutingProtocol {
     unsigned short numPorts; // Number of ports on the router
     eProtocolType protocolType; // Protocol type (P_DV or P_LS)
     unordered_map<port_num, PortStatusEntry> portStatus; // Port status map
+    unordered_map<router_id, Neighbor> adjacencyList; // Adjacency list
+    unordered_map<router_id, router_id> forwardingTable; // Forwarding table
 };
 
 #endif

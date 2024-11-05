@@ -38,7 +38,17 @@ struct PortStatusEntry {
     cost timeCost;
     router_id destRouterID;
     bool isUp;
+    PortStatusEntry() : lastUpdate(0), timeCost(0), destRouterID(0), isUp(false) {}
 };
+
+// Define Neighbor struct
+struct Neighbor {
+    port_num port;
+    cost timeCost;
+    Neighbor() : port(0), timeCost(0) {}
+    Neighbor(port_num p, cost c) : port(p), timeCost(c) {}
+};
+
 
 void* serializePacket(Packet serializeMe);
 Packet deserializePacket(void* deserializeMe);
