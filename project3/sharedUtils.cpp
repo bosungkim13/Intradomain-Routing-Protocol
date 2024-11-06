@@ -1,20 +1,44 @@
 #include "sharedUtils.h"
 
 void* serializePacket(Packet serializeMe) {
-    // Allocate memory for the serialized packet
-    void* buffer = malloc(sizeof(Packet));
-    if (buffer == nullptr) {
-        return nullptr; // Check for allocation failure
-    }
     // Copy the packet header with endian conversion
     PacketHeader header = serializeMe.header;
+    unsigned short mySize = header.size;
     header.size = htons(header.size);
     header.sourceID = htons(header.sourceID);
     header.destID = htons(header.destID);
-    memcpy(buffer, &header, sizeof(PacketHeader));
 
-    // Copy the payload
-    memcpy((char*)buffer + sizeof(PacketHeader), serializeMe.payload, sizeof(serializeMe.payload));
+    // Allocate memory for the serialized packet
+    void* buffer = malloc(mySize);
+    if (buffer == nullptr) {
+        return nullptr; // Check for allocation failure
+    }
+
+    memcpy(buffer, &header, HEADER_SIZE);
+
+    // Copy the payload. Could be less than the maximum payload size.
+    int offset = HEADER_SIZE;
+    if (header.packetType == LS) {
+        // For LS packet, first 4 bytes are seqNum
+        unsigned int seqNum = htons(serializeMe.payload[offset - HEADER_SIZE]);
+        memcpy((char*)buffer + offset, &seqNum, sizeof(seq_num));
+        // For the rest of the payload, it alternates between neighbor ID and cost
+        offset += sizeof(seq_num);
+        while (offset < header.size) {
+            unsigned short neighborID = htons(serializeMe.payload[offset - HEADER_SIZE]);
+            memcpy((char*)buffer + offset, &neighborID, sizeof(router_id));
+            offset += sizeof(router_id);
+            unsigned short costValue = htons(serializeMe.payload[offset]);
+            memcpy((char*)buffer + offset, &costValue, sizeof(cost));
+            offset += sizeof(cost);
+        }
+    } else if (header.packetType == PONG || header.packetType == PING) {
+        // For PING and PONG packets, the payload is the timestamp
+        time_stamp timestamp = htonl(serializeMe.payload[offset - HEADER_SIZE]);
+        memcpy((char*)buffer + offset, &timestamp, sizeof(timestamp));
+    } else {
+        std::cout << "serializePacket(): Unknown packet type. Not processing payload." << std::endl;
+    }
     
     return buffer; // Return the serialized packet
 }
@@ -30,8 +54,8 @@ Packet deserializePacket(void* deserializeMe) {
     packet.header.sourceID = ntohs(packet.header.sourceID);
     packet.header.destID = ntohs(packet.header.destID);
     
-    // Copy the payload back
-    memcpy(packet.payload, (char*)deserializeMe + sizeof(PacketHeader), sizeof(packet.payload));
+    // Copy the payload back. Could be less than the maximum payload size.
+    memcpy(packet.payload, (char*)deserializeMe + sizeof(PacketHeader), packet.header.size - sizeof(PacketHeader));
     
     return packet; // Return the deserialized packet
 }

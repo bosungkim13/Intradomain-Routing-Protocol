@@ -46,7 +46,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
 // HELPER FUNCTIONS
 // Function to send Ping-Pong packets
 void RoutingProtocolImpl::sendPings() {
-  int size = sizeof(Packet); // Size of the packet struct
+  int size = HEADER_SIZE + sizeof(time_stamp); // Size of the packet struct
 
   for (unsigned int i = 0; i < this->numPorts; i++) {
     Packet packet;
@@ -122,9 +122,9 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
 
       if (protocolType == P_LS) {
           // for link state routing protocol, we need to update since cost changes
-          myLSRP->updateTable();
+          // myLSRP->updateTable();
           // send updates to all neighbors
-          myLSRP->sendUpdates();
+          // myLSRP->sendUpdates();
       }
 
     } else {
@@ -132,8 +132,8 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
       adjacencyList[pongPacket.header.sourceID]= Neighbor(port, rtt);
 
       if (protocolType == P_LS) {
-        myLSRP->updateTable();
-        myLSRP->sendUpdates();
+        // myLSRP->updateTable();
+        // myLSRP->sendUpdates();
       }
 
       // Update the forwarding table? Should alwasy be the same
