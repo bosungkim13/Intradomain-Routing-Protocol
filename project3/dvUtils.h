@@ -1,6 +1,8 @@
+#ifndef DVUTILS_H
+#define DVUTILS_H
 #include <cstdint>
 #include <vector>
-#include <sharedUtils.h>
+#include "sharedUtils.h"
 #include <unordered_map>
 #include <limits>
 
@@ -8,7 +10,10 @@
 struct DVPacketPayload {
     // TODO: isn
     seq_num sequenceNumber; // 16-bit sequence number
-    std::vector<std::pair<router_id, time_stamp>> neighbors; // Vector of (neighborId, cost) pairs
+
+    // not sure if a DV update packet should contain the neighbors, 
+    // isn't this only in the ping pong phase / initialization?
+    std::vector<std::pair<router_id, time_stamp> > neighbors; // Vector of (neighborId, cost) pairs
 
     // Constructor to initialize sequence number
     DVPacketPayload(seq_num seqNum) : sequenceNumber(seqNum) {}
@@ -62,3 +67,4 @@ struct DVForwardingTable {
 char* serializeDVPacket(DVPacketPayload serializeMe);
 
 DVPacketPayload deserializeDVPayload(char* deserializeMe); // will fix later
+#endif

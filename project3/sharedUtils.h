@@ -2,7 +2,6 @@
 #define SHAREDUTILS_H
 #include <global.h>
 #include <Node.h>
-#include <global.h>
 
 #define MAX_PACKET_SIZE 65535 // 2^16 - 1
 #define HEADER_SIZE sizeof(PacketHeader)
@@ -14,6 +13,14 @@ typedef unsigned short router_id;
 typedef unsigned short cost;
 typedef unsigned short time_stamp;
 typedef unsigned int seq_num;
+
+// Define Neighbor struct
+struct Neighbor {
+    port_num port;
+    cost timeCost;
+    Neighbor() : port(0), timeCost(0) {}
+    Neighbor(port_num p, cost c) : port(p), timeCost(c) {}
+};
 
 typedef std::unordered_map<router_id, int>& seqNum_ref;
 typedef std::unordered_map<router_id, Neighbor>& adjacencyList_ref; // Adjust type as needed
@@ -46,14 +53,6 @@ struct PortStatusEntry {
     router_id destRouterID;
     bool isUp;
     PortStatusEntry() : lastUpdate(0), timeCost(0), destRouterID(0), isUp(false) {}
-};
-
-// Define Neighbor struct
-struct Neighbor {
-    port_num port;
-    cost timeCost;
-    Neighbor() : port(0), timeCost(0) {}
-    Neighbor(port_num p, cost c) : port(p), timeCost(c) {}
 };
 
 

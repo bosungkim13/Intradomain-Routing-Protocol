@@ -1,13 +1,12 @@
 #include "sharedUtils.h"
 #include "dvUtils.h"
-#include <Node.h>
-#include <global.h>
+#include "Node.h"
+#include "global.h"
 
 class DistanceVector{
     public:
-        DistanceVector(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts);
+        DistanceVector(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts);
         ~DistanceVector(); // TODO: figure out destructor logic later
-        DVForwardingTable dvTable;
 
         Packet createDVPacket(unsigned short size, unsigned short destID);
 
@@ -24,7 +23,7 @@ class DistanceVector{
         router_id myRouterID;
         adjacencyList_ref adjacencyList;
         portStatus_ref portStatus;
-        forwardingTable_ref forwardingTable;
+        DVForwardingTable forwardingTable;
         Node* sys;
         port_num numPorts;
         unsigned int seqNum = 0;

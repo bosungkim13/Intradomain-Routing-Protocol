@@ -2,7 +2,7 @@
 #include "sharedUtils.h"
 #include "dvUtils.h"
 
-DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts):
+DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts):
     sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
 Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID) {
@@ -15,24 +15,51 @@ Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID
 
     for (auto nbr: this->adjacencyList) {
         auto neighborID = nbr.first;
-        auto cost = nbr.second.timeCost;
+        auto tCost = nbr.second.timeCost;
 
         memcpy(packet.payload, &neighborID, sizeof(neighborID));
-        memcpy(packet.payload + sizeof(neighborID), &cost, sizeof(cost));
+        memcpy(packet.payload + sizeof(neighborID), &tCost, sizeof(tCost));
     }
     return packet;
 
 }
 
+// THIS IS JUST THE "RECEIVING AN UPDATE" CASE.
+// THERE NEEDS TO BE SEPARATE LOGIC FOR WHEN THE ACTUAL TIME COST CHANGES, WHICH WILL BE HANDLED BY THE ROUTINE PING PONGS
 void DistanceVector::handleDVPacket(port_num port, Packet pongPacket) {
-    // check staleness of packet
+    // TODO: PingPong phase needs to provide context for the initial DVs for each node.
+    // The PingPong phase should also populate the initial forwarding tables for each node.
+
+    // check staleness of packet (idk how to do this yet)
 
     // unpack the payload into a DVTable struct
+    // DVPacketPayload dvPayload = deserializeDVPayload(pongPacket.payload);
+    int neighborID = pongPacket.header.sourceID;
+    DVForwardingTable dvPayload; // LET'S JUST ASSUME THIS IS WHAT DESERIALIZE DV PAYLOAD RETURNS, I'M PRETTY SURE THIS IS WHAT THE DISTANCE VECTORS SHOULD BE
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
 
-    // TODO: do this after implementing basic methods
+    bool updateRequired = false;
+    for (auto row: dvPayload.table) {
+        auto dest  = row.first;
+        auto nbrToDestRoute = row.second;
+        if (adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost) {
+            forwardingTable.updateRoute(dest, neighborID, adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost);
+        }
+    }
+
+    // if the table was updated, send out a new DV packet to all neighbors
+    if (updateRequired) {
+        Packet newDV = createDVPacket(sizeof(DVPacketPayload), 0);
+        // TODO: serialize/deserialize of DV packets needs to be properly implemented.
+        void * serializedDVPacket = serializeDVPacket(newDV);
+        for (auto port: portStatus) {
+            if (port.second.isUp) {
+                sys->send(port.first, newDV);
+            }
+        }
+    }
 };
 
 void updateDVFreshness(); 
