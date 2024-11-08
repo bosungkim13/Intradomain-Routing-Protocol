@@ -1,6 +1,8 @@
 #ifndef SHAREDUTILS_H
 #define SHAREDUTILS_H
 #include <global.h>
+#include <Node.h>
+#include <global.h>
 
 #define MAX_PACKET_SIZE 65535 // 2^16 - 1
 #define HEADER_SIZE sizeof(PacketHeader)
@@ -12,6 +14,11 @@ typedef unsigned short router_id;
 typedef unsigned short cost;
 typedef unsigned short time_stamp;
 typedef unsigned int seq_num;
+
+typedef std::unordered_map<router_id, int>& seqNum_ref;
+typedef std::unordered_map<router_id, Neighbor>& adjacencyList_ref; // Adjust type as needed
+typedef std::unordered_map<port_num, PortStatusEntry>& portStatus_ref; // Adjust type as needed
+typedef std::unordered_map<router_id, router_id>& forwardingTable_ref;    // Adjust type as needed
 
 // Define PacketHeader struct
 struct PacketHeader {

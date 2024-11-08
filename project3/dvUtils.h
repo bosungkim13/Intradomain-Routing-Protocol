@@ -6,6 +6,7 @@
 
 // Distance Vector Packet Payload
 struct DVPacketPayload {
+    // TODO: isn
     seq_num sequenceNumber; // 16-bit sequence number
     std::vector<std::pair<router_id, time_stamp>> neighbors; // Vector of (neighborId, cost) pairs
 
@@ -57,3 +58,7 @@ struct DVForwardingTable {
         return table.find(destination) != table.end();
     }
 };
+
+char* serializeDVPacket(DVPacketPayload serializeMe);
+
+DVPacketPayload deserializeDVPayload(char* deserializeMe); // will fix later
