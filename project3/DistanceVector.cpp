@@ -24,6 +24,19 @@ Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID
 
 }
 
+// sends an udpate to all neighbors
+void DistanceVector::sendUpdates() {
+    Packet newDV = createDVPacket(sizeof(DVPacketPayload), 0);
+    // newDV.payload
+    // TODO: serialize/deserialize of DV packets needs to be properly implemented.
+    void * serializedDVPacket = serializeDVPacket(newDV);
+    for (auto port: portStatus) {
+        if (port.second.isUp) {
+            sys->send(port.first, newDV);
+        }
+    }
+}
+
 // THIS IS JUST THE "RECEIVING AN UPDATE" CASE.
 // THERE NEEDS TO BE SEPARATE LOGIC FOR WHEN THE ACTUAL TIME COST CHANGES, WHICH WILL BE HANDLED BY THE ROUTINE PING PONGS
 void DistanceVector::handleDVPacket(port_num port, Packet pongPacket) {
@@ -50,16 +63,35 @@ void DistanceVector::handleDVPacket(port_num port, Packet pongPacket) {
     }
 
     // if the table was updated, send out a new DV packet to all neighbors
-    if (updateRequired) {
-        Packet newDV = createDVPacket(sizeof(DVPacketPayload), 0);
-        // TODO: serialize/deserialize of DV packets needs to be properly implemented.
-        void * serializedDVPacket = serializeDVPacket(newDV);
-        for (auto port: portStatus) {
-            if (port.second.isUp) {
-                sys->send(port.first, newDV);
+    if (updateRequired) sendUpdates();
+};
+
+// function that handles changes in neighbor to neighbor cost, determined from
+// ping pong process
+void DistanceVector::handleCostChange(port_num port, cost changeCost) {
+
+    // get the neighbor ID from the port
+    router_id neighborID = portStatus[port].destRouterID;
+    bool updateRequired = false;
+    // update the routing table with the new cost
+    for (auto row: forwardingTable.table) {
+        auto dest = row.first;
+        auto route = row.second;
+        if (route.nextHop == neighborID) {
+            // special case where the route is just to the neighbor itself, set to changeCost
+            if (dest == neighborID) {
+                forwardingTable.updateRoute(dest, neighborID, changeCost);
+            } else {
+                // add to current cost 
+                forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost);
+                if (changeCost + route.routeCost < adjacencyList[neighborID].timeCost) {
+                    adjacencyList[neighborID].timeCost = changeCost + route.routeCost;
+                    updateRequired = true;
+                }
             }
         }
     }
-};
+    if (updateRequired) sendUpdates();
+}
 
 void updateDVFreshness(); 

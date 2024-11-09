@@ -16,3 +16,17 @@ DVPacketPayload deserializeDVPayload(char* deserializeMe) {
     }
     return payload;
 }
+
+char* serializeDVPayload(DVPacketPayload serializeMe) {
+    char* serializedPacket = new char[MAX_PAYLOAD_SIZE];
+    int offset = 0;
+    memcpy(serializedPacket, &serializeMe.sequenceNumber, sizeof(seq_num));
+    offset += sizeof(seq_num);
+    for (auto neighbor: serializeMe.neighbors) {
+        memcpy(serializedPacket + offset, &neighbor.first, sizeof(router_id));
+        offset += sizeof(router_id);
+        memcpy(serializedPacket + offset, &neighbor.second, sizeof(time_stamp));
+        offset += sizeof(time_stamp);
+    }
+    return serializedPacket;
+}

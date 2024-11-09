@@ -19,6 +19,10 @@ class DistanceVector{
         // (this method will be called every 1 second)
         void updateFreshness();
 
+        void handleCostChange(port_num port, cost changeCost);
+
+        void sendUpdates();
+
     private:
         router_id myRouterID;
         adjacencyList_ref adjacencyList;
