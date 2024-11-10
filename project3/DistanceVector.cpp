@@ -18,7 +18,7 @@ Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID
 
     packet.header.destID = destID;
 
-    for (auto nbr : this->adjacencyList)
+    for (const auto& nbr : this->adjacencyList) // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
     {
         auto neighborID = nbr.first;
         auto tCost = nbr.second.timeCost;
@@ -73,6 +73,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet pongPacket)
         if (adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
             forwardingTable.updateRoute(dest, neighborID, adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost);
+            updateRequired = true;
         }
     }
 
