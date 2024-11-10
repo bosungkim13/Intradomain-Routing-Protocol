@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <limits>
 #include <stdlib.h>
+#include <cassert>
+#include <arpa/inet.h>
+
 
 // // Distance Vector Packet Payload
 
@@ -41,7 +44,7 @@ struct DVRoute
 // Distance Vector Forwarding Table
 struct DVForwardingTable
 {
-    std::unordered_map<router_id, DVRoute> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
+    unordered_map<router_id, DVRoute> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
 
     // Add or update a route for a destination
     void updateRoute(router_id destination, router_id nextHop, cost routeCost)
@@ -72,61 +75,36 @@ struct DVForwardingTable
     {
         return table.find(destination) != table.end();
     }
-
-    // Payload of a DV Packet == Distance Vector Forwarding Table
-    char *serializeDVPayload()
-    {
-        char* buffer = (char *) malloc(table.size() * (2 * sizeof(router_id) + sizeof(cost)));
-        size_t offset = 0;
-
-        unsigned long size = table.size();
-        memcpy(buffer + offset, &size, sizeof(size_t));
-        offset += sizeof(size_t);
-
-        for (const auto& nbr : table) {
-            router_id destID = nbr.first;
-            router_id nextHop = nbr.second.nextHop;
-            cost routeCost = nbr.second.routeCost;
-
-            memcpy(buffer + offset, &destID, sizeof(router_id));
-            offset += sizeof(router_id);
-            memcpy(buffer + offset, &nextHop, sizeof(router_id));
-            offset += sizeof(router_id);
-            memcpy(buffer + offset, &routeCost, sizeof(cost));
-            offset += sizeof(cost);
-        }
-
-        return buffer;
-    }   
-
-
-    static DVForwardingTable deserializeDVPayload(char *dvPayload) 
-    {
-        DVForwardingTable table;
-        size_t offset = 0;
-
-        // Read table size
-        size_t tableSize;
-        memcpy(&tableSize, dvPayload + offset, sizeof(size_t));
-        offset += sizeof(size_t);
-
-        // Deserialize each entry (destination, nextHop, routeCost)
-        for (size_t i = 0; i < tableSize; i++)
-        {
-            router_id destination, nextHop;
-            cost routeCost;
-
-            // Read destination router_id
-            memcpy(&destination, dvPayload + offset, sizeof(router_id));
-            offset += sizeof(router_id);
-
-            // Read nextHop and routeCost for DVRoute
-            memcpy(&nextHop, dvPayload + offset, sizeof(router_id));
-            offset += sizeof(router_id);
-            memcpy(&routeCost, dvPayload + offset, sizeof(cost));
-            offset += sizeof(cost);
-        }
-        return table;
-    }
 };
+
+DVForwardingTable deserializeDVPayload(Packet packet) 
+{
+    unsigned int numEntries = (packet.header.size - HEADER_SIZE) / (2 * sizeof(router_id) + sizeof(cost));
+
+    assert((packet.header.size - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) == 0); // TEMPORARY CODE, DELETE LATER
+
+    DVForwardingTable table;
+    size_t offset = 0;
+
+    // Payload alternates between destination ID, nextHop ID, and routeCost
+    for (unsigned int i = 0; i < numEntries; i++) {
+        router_id destID, nextHop;
+        cost routeCost;
+
+        
+        destID = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        offset += sizeof(router_id);
+
+        nextHop = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        offset += sizeof(router_id);
+
+        routeCost = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        offset += sizeof(cost);
+
+        table.updateRoute(destID, nextHop, routeCost);
+    }
+
+    return table;
+}
+
 #endif

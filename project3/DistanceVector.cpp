@@ -4,7 +4,7 @@
 
 DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
-Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID)
+Packet DistanceVector::createDVPacket(unsigned short destID)
 {
 
     // To Michael: this is pretty much identical to Bosung's code. the only real difference is
@@ -13,38 +13,42 @@ Packet DistanceVector::createDVPacket(unsigned short size, unsigned short destID
     // the values or taking advantage of the struct.
     Packet packet;
     packet.header.packetType = DV;
-    packet.header.size = size;
+    packet.header.size = HEADER_SIZE + forwardingTable.table.size() * (2 * sizeof(router_id) + sizeof(cost)); // structure of payload entry: destID, nextHop, routeCost
     packet.header.sourceID = this->myRouterID;
-
     packet.header.destID = destID;
 
-    for (const auto& nbr : this->adjacencyList) // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
-    {
-        auto neighborID = nbr.first;
-        auto tCost = nbr.second.timeCost;
+    uint32_t offset = 0;
 
-        memcpy(packet.payload, &neighborID, sizeof(neighborID));
-        memcpy(packet.payload + sizeof(neighborID), &tCost, sizeof(tCost));
-    }
+    for (const auto& nbr : forwardingTable.table) { // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
+            router_id destID = nbr.first;
+            router_id nextHop = nbr.second.nextHop;
+            cost routeCost = nbr.second.routeCost;
+
+            memcpy(packet.payload + offset, &destID, sizeof(router_id));
+            offset += sizeof(router_id);
+            memcpy(packet.payload + offset, &nextHop, sizeof(router_id));
+            offset += sizeof(router_id);
+            memcpy(packet.payload + offset, &routeCost, sizeof(cost));
+            offset += sizeof(cost);
+        }
     return packet;
 }
 
 // sends an udpate to all neighbors
 void DistanceVector::sendUpdates()
 {
-    Packet newDV = createDVPacket(sizeof(DVPacketPayload), 0);
-
-    // TODO: serialize/deserialize of DV packets needs to be properly implemented.
-
     // To Michael: I think the payload of a DV packet should contain the routing table. A neighbors list could also work
     // but I think we already pass that in as reference (adjList_ref). Also it helps that the routing table contains the
     // neighbors already. (same nextHop and dest entries)
-    void *serializedDVPacket = serializeDVPacket(newDV);
-    for (auto port : portStatus)
+    // Michael: D
+    for (const auto& port : portStatus)
     {
-        if (port.second.isUp)
+        PortStatusEntry portStatusEntry = port.second;
+        if (portStatusEntry.isUp)
         {
-            sys->send(port.first, newDV);
+            Packet newDVPacket = createDVPacket(portStatusEntry.destRouterID);
+            void* serializedDVPacket = serializePacket(newDVPacket);
+            sys->send(port.first, serializedDVPacket, newDVPacket.header.size);
         }
     }
 }
@@ -60,7 +64,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet pongPacket)
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(pongPacket.payload);
     int neighborID = pongPacket.header.sourceID;
-    DVForwardingTable dvPayload; // LET'S JUST ASSUME THIS IS WHAT DESERIALIZE DV PAYLOAD RETURNS, I'M PRETTY SURE THIS IS WHAT THE DISTANCE VECTORS SHOULD BE
+    DVForwardingTable dvPayload = deserializeDVPayload(pongPacket); // LET'S JUST ASSUME THIS IS WHAT DESERIALIZE DV PAYLOAD RETURNS, I'M PRETTY SURE THIS IS WHAT THE DISTANCE VECTORS SHOULD BE
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref

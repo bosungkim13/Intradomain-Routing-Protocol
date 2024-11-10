@@ -9,7 +9,7 @@ public:
     DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts);
     ~DistanceVector(); // TODO: figure out destructor logic later
 
-    Packet createDVPacket(unsigned short size, unsigned short destID);
+    Packet createDVPacket(unsigned short destID);
 
     // Handle DV update packet received from a neighbor
     // This should involve updating DVForwardingTable struct (and I think it should send updated DV to neighbors?)

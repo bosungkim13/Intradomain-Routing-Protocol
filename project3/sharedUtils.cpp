@@ -1,4 +1,5 @@
 #include "sharedUtils.h"
+#include <cassert>
 
 void* serializePacket(Packet serializeMe) {
     // Copy the packet header with endian conversion
@@ -28,8 +29,27 @@ void* serializePacket(Packet serializeMe) {
             unsigned short neighborID = htons(serializeMe.payload[offset - HEADER_SIZE]);
             memcpy((char*)buffer + offset, &neighborID, sizeof(router_id));
             offset += sizeof(router_id);
-            unsigned short costValue = htons(serializeMe.payload[offset]);
+            unsigned short costValue = htons(serializeMe.payload[offset]); // Note from Michael: should this have "- HEADER_SIZE" too?
             memcpy((char*)buffer + offset, &costValue, sizeof(cost));
+            offset += sizeof(cost);
+        }
+    } else if (header.packetType == DV) {
+        unsigned int numEntries = (header.size - HEADER_SIZE) / (2 * sizeof(router_id) + sizeof(cost));
+
+        assert((header.size - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) == 0); // TEMPORARY CODE, DELETE LATER
+
+        // For the rest of the payload, it alternates between destination ID, nextHop ID, and routeCost
+        for (unsigned int i = 0; i < numEntries; i++) {
+            unsigned short destID = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            memcpy((char*)buffer + offset, &destID, sizeof(router_id));
+            offset += sizeof(router_id);
+
+            unsigned short nextHopID = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            memcpy((char*)buffer + offset, &nextHopID, sizeof(router_id));
+            offset += sizeof(router_id);
+
+            unsigned short routeCost = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            memcpy((char*)buffer + offset, &routeCost, sizeof(cost));
             offset += sizeof(cost);
         }
     } else if (header.packetType == PONG || header.packetType == PING) {
@@ -57,5 +77,7 @@ Packet deserializePacket(void* deserializeMe) {
     // Copy the payload back. Could be less than the maximum payload size.
     memcpy(packet.payload, (char*)deserializeMe + sizeof(PacketHeader), packet.header.size - sizeof(PacketHeader));
     
+    free(deserializeMe); // Note to Bosung: I (michael) added this line, make sure it doesn't break anything in your implementation of LS
+
     return packet; // Return the deserialized packet
 }
