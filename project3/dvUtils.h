@@ -107,27 +107,24 @@ struct DVForwardingTable
 
         // Read table size
         size_t tableSize;
-        std::memcpy(&tableSize, dvPayload + offset, sizeof(tableSize));
-        offset += sizeof(tableSize);
+        memcpy(&tableSize, dvPayload + offset, sizeof(size_t));
+        offset += sizeof(size_t);
 
-        // Deserialize each entry
-        for (uint32_t i = 0; i < tableSize; ++i)
+        // Deserialize each entry (destination, nextHop, routeCost)
+        for (size_t i = 0; i < tableSize; i++)
         {
             router_id destination, nextHop;
             cost routeCost;
 
             // Read destination router_id
-            std::memcpy(&destination, dvPayload + offset, sizeof(router_id));
+            memcpy(&destination, dvPayload + offset, sizeof(router_id));
             offset += sizeof(router_id);
 
             // Read nextHop and routeCost for DVRoute
-            std::memcpy(&nextHop, dvPayload + offset, sizeof(router_id));
+            memcpy(&nextHop, dvPayload + offset, sizeof(router_id));
             offset += sizeof(router_id);
-            std::memcpy(&routeCost, dvPayload + offset, sizeof(cost));
+            memcpy(&routeCost, dvPayload + offset, sizeof(cost));
             offset += sizeof(cost);
-
-            // Update the table with the deserialized route
-            table.updateRoute(destination, nextHop, routeCost);
         }
         return table;
     }
