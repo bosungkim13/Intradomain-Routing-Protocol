@@ -144,3 +144,89 @@ router_id LinkState::FindNextHop(unordered_map<router_id, std::pair<router_id, c
     return currDest;
 }
 
+unordered_map<router_id, cost> LinkState::DeserializeLSPacket(void* deserializeMe, router_id &sourceId, seq_num &seqNum) {
+    Packet packet;
+    unordered_map<router_id, cost> costTable;
+    
+    // Copy the header back
+    memcpy(&packet.header, deserializeMe, sizeof(PacketHeader));
+    
+    // Convert header fields from network to host byte order
+    packet.header.size = ntohs(packet.header.size);
+    packet.header.sourceID = ntohs(packet.header.sourceID);
+
+    // Read the sequence number
+    memcpy(&seqNum, (char*)deserializeMe + sizeof(PacketHeader), sizeof(seq_num));
+    seqNum = ntohs(seqNum); // Convert from network to host byte order
+
+    // Reader neioghbor id and cost
+    int offset = sizeof(PacketHeader) + sizeof(seq_num);
+    while (offset < packet.header.size) {
+        router_id neighborID;
+        cost neighborCost;
+
+        memcpy(&neighborID, (char*)deserializeMe + offset, sizeof(router_id));
+        neighborID = ntohs(neighborID); // Convert from network to host byte order
+        offset += sizeof(router_id);
+
+        memcpy(&neighborCost, (char*)deserializeMe + offset, sizeof(cost));
+        neighborCost = ntohs(neighborCost); // Convert from network to host byte order
+        offset += sizeof(cost);
+
+        // Store the neighbor ID and cost in the costTable
+        costTable[neighborID] = neighborCost;
+    }
+    
+    return costTable;
+}
+
+void  LinkState::HandlePacket(port_num portId, void* handleMe, unsigned short size) {
+    unordered_map<router_id, ls_path_info> newCostTable;
+    seq_num incomingSeqNum;
+    router_id incomingSourceId;
+    unordered_map<router_id, cost> incomingCostTable = DeserializeLSPacket(handleMe, incomingSourceId, incomingSeqNum);
+    
+    if (this->seqTable.find(incomingSourceId) == this->seqTable.end() || incomingSeqNum > this->seqTable[incomingSourceId]) {
+        // if source id is not in table or incoming seq num is greater than current seq num
+        this->seqTable[incomingSourceId] = incomingSeqNum;
+
+        if (this->NeedCostUpdated(incomingSourceId, incomingCostTable)) {
+            this->costTable[incomingSourceId] = incomingCostTable;
+            this->UpdateTable();
+        }
+        // send updates to all neighbors
+        this->SendUpdates();
+    }
+}
+
+bool LinkState::NeedCostUpdated(router_id nbrId, unordered_map<router_id, cost> neighborCostTable) {
+    // cost table does not contain this neighbor yet
+    if (this->costTable.find(nbrId) == this->costTable.end()) {
+        return !neighborCostTable.empty();
+    }
+    else
+    {
+        // cost table entry exists
+        unordered_map<router_id, cost> currEntry = this->costTable[nbrId];
+        if (currEntry.size() != neighborCostTable.size()) {
+            return true;
+        } else {
+            for (auto it : neighborCostTable) {
+                router_id neighbor_id = it.first;
+                cost neighbor_cost = it.second;
+                if (currEntry.find(neighbor_id) == currEntry.end()) {
+                    // don' have this neighbor yet
+                    return true;
+                }
+                else {
+                    // have neighbor cost but it is different
+                    if (currEntry[neighbor_id] != neighbor_cost) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+}

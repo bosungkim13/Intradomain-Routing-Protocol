@@ -20,6 +20,10 @@ class LinkState {
         // Function to find the next hop for a given destination
         router_id FindNextHop(unordered_map<router_id, std::pair<router_id, cost>> activeDistances, router_id destId);
 
+        unordered_map<router_id, cost> LinkState::DeserializeLSPacket(void* deserializeMe, router_id &sourceId, seq_num &seqNum);
+
+        bool NeedCostUpdated(router_id nbrId, unordered_map<router_id, cost> neighborCostTable);
+
         LinkState(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts);
         ~LinkState();
     private:
