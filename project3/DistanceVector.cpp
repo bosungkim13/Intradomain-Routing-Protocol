@@ -69,7 +69,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet pongPacket)
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(pongPacket.payload);
     int neighborID = pongPacket.header.sourceID;
-    DVForwardingTable dvPayload = deserializeDVPayload(pongPacket); 
+    DVForwardingTable dvPayload = deserializeDVPayload(pongPacket, this->sys); 
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
@@ -117,4 +117,12 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
         sendUpdates();
 }
 
-void updateDVFreshness();
+void DistanceVector::updateFreshness() {
+    // iterate through the forwarding table and remove any entries that have not been updated in the last 45 seconds
+    for (auto row : forwardingTable.table) {
+        auto dest = row.first;
+        if (!forwardingTable.isFresh(dest)) {
+            forwardingTable.removeRoute(dest);
+        }
+    }
+};
