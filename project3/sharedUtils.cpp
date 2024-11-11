@@ -21,15 +21,18 @@ void* serializePacket(Packet serializeMe) {
     int offset = HEADER_SIZE;
     if (header.packetType == LS) {
         // For LS packet, first 4 bytes are seqNum
-        unsigned int seqNum = htons(serializeMe.payload[offset - HEADER_SIZE]);
+        unsigned int seqNum = serializeMe.payload[offset - HEADER_SIZE];
+        seqNum = htonl(seqNum);
         memcpy((char*)buffer + offset, &seqNum, sizeof(seq_num));
         // For the rest of the payload, it alternates between neighbor ID and cost
         offset += sizeof(seq_num);
         while (offset < header.size) {
-            unsigned short neighborID = htons(serializeMe.payload[offset - HEADER_SIZE]);
+            unsigned short neighborID = serializeMe.payload[offset - HEADER_SIZE];
+            neighborID = htons(neighborID);
             memcpy((char*)buffer + offset, &neighborID, sizeof(router_id));
             offset += sizeof(router_id);
-            unsigned short costValue = htons(serializeMe.payload[offset]); // Note from Michael: should this have "- HEADER_SIZE" too?
+            unsigned short costValue = serializeMe.payload[offset];
+            costValue = htons(costValue);
             memcpy((char*)buffer + offset, &costValue, sizeof(cost));
             offset += sizeof(cost);
         }
@@ -54,7 +57,8 @@ void* serializePacket(Packet serializeMe) {
         }
     } else if (header.packetType == PONG || header.packetType == PING) {
         // For PING and PONG packets, the payload is the timestamp
-        time_stamp timestamp = htonl(serializeMe.payload[offset - HEADER_SIZE]);
+        time_stamp timestamp = serializeMe.payload[offset - HEADER_SIZE];
+        timestamp = htonl(timestamp);
         memcpy((char*)buffer + offset, &timestamp, sizeof(timestamp));
     } else {
         std::cout << "serializePacket(): Unknown packet type. Not processing payload." << std::endl;
