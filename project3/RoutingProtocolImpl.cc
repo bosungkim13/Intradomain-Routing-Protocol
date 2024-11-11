@@ -18,10 +18,40 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->routerID = router_id;
   this->protocolType = protocol_type;
 
+  char *ppAlarm = new char[sizeof(eAlarmType)];
+  char *updateAlarm = new char[sizeof(eAlarmType)];
+  char *freshnessAlarm = new char[sizeof(eAlarmType)];
+
+  *((eAlarmType *)ppAlarm) = PingPongAlarm;
+  *((eAlarmType *)updateAlarm) = UpdateAlarm;
+  *((eAlarmType *)freshnessAlarm) = FreshnessAlarm;
+
+  sendPings();
+
+  this->sys->set_alarm(this, 1 * 1000, freshnessAlarm);
+  this->sys->set_alarm(this, 10 * 1000, ppAlarm);
+  this->sys->set_alarm(this, 30 * 1000, updateAlarm);
+
+  // TODO: initialize link or distance vector protocol
+
 }
 
 void RoutingProtocolImpl::handle_alarm(void *data) {
   // add your own code
+  eAlarmType type = (*((eAlarmType *)data));
+  switch (type) {
+    case PingPongAlarm:
+      this->sendPings();
+      this->sys->set_alarm(this, 10 * 1000, data);
+      break;
+    case UpdateAlarm:
+      break;
+    case FreshnessAlarm:
+      break;
+    default:
+      std::cout << "handle_alarm(): Unknown alarm type." << std::endl;
+      break;
+  }
 }
 
 void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short size) {

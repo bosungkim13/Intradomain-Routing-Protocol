@@ -55,6 +55,12 @@ struct PortStatusEntry {
     PortStatusEntry() : lastUpdate(0), timeCost(0), destRouterID(0), isUp(false) {}
 };
 
+enum eAlarmType {
+    PingPongAlarm,
+    UpdateAlarm,
+    FreshnessAlarm,
+};
+
 
 void* serializePacket(Packet serializeMe);
 Packet deserializePacket(void* deserializeMe);

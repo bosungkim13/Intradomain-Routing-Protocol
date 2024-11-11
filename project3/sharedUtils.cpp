@@ -31,7 +31,7 @@ void* serializePacket(Packet serializeMe) {
             neighborID = htons(neighborID);
             memcpy((char*)buffer + offset, &neighborID, sizeof(router_id));
             offset += sizeof(router_id);
-            unsigned short costValue = serializeMe.payload[offset];
+            unsigned short costValue = serializeMe.payload[offset - HEADER_SIZE];
             costValue = htons(costValue);
             memcpy((char*)buffer + offset, &costValue, sizeof(cost));
             offset += sizeof(cost);
