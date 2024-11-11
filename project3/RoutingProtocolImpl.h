@@ -36,8 +36,23 @@ class RoutingProtocolImpl : public RoutingProtocol {
     // that the packet is generated locally and not received from 
     // a neighbor router.
 
+    void sendPings();
+    void handlePings(unsigned short port, Packet pingPacket);
+    void handlePongs(unsigned short port, Packet pongPacket);
+    // Send some pings to neighbors
+
+    void updatePortFreshness();
+    // TODO: Implement this method to iterate through ports. Ports that have not received a PONG in the last 15 seconds should have portStatus.isUp set to false.
+    //      (this method will be called every 1 second)
+
  private:
     Node *sys; // To store Node object; used to access GSR9999 interfaces 
+    unsigned short routerID; // Router ID
+    unsigned short numPorts; // Number of ports on the router
+    eProtocolType protocolType; // Protocol type (P_DV or P_LS)
+    unordered_map<port_num, PortStatusEntry> portStatus; // Port status map
+    unordered_map<router_id, Neighbor> adjacencyList; // Adjacency list
+    unordered_map<router_id, router_id> forwardingTable; // Forwarding table
 };
 
 #endif
