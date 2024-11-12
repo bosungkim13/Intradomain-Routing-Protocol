@@ -33,9 +33,9 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->sys->set_alarm(this, 30 * 1000, updateAlarm);
 
   // TODO: initialize link or distance vector protocol
-  if (this->protocolType == LS) {
+  if (this->protocolType == P_LS) {
     this->myLSRP = LinkState(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, &this->forwardingTable, this->numPorts);
-  } else if (this->protocolType == DV) {
+  } else if (this->protocolType == P_DV) {
     this->myDV = DistanceVector(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, this->numPorts);
   }
 
@@ -240,12 +240,12 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   }
 
   // this is poor design, but DV has its own separate instance of a forwarding table, so we need to use that one.
-  if (this->protocolType == LS) {
+  if (this->protocolType == P_LS) {
     if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
       // If the destination is in the forwarding table, send the packet to the next hop
       sys->send(this->forwardingTable[destId], handleMe, dataPacket.header.size);
     }
-  } else if (this->protocolType == DV) { 
+  } else if (this->protocolType == P_DV) { 
     if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {
       // If the destination is in the forwarding table, send the packet to the next hop
       sys->send(this->myDV.forwardingTable.table[destId].nextHop, handleMe, dataPacket.header.size);
