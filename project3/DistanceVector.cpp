@@ -1,10 +1,12 @@
 #include "DistanceVector.h"
 #include "sharedUtils.h"
 #include "dvUtils.h"
+#include <climits>
+#include <unordered_set>
 
 DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
-Packet DistanceVector::createDVPacket(unsigned short destID)
+Packet DistanceVector::createDVPacket(unsigned short neighborID)
 {
 
     // To Michael: this is pretty much identical to Bosung's code. the only real difference is
@@ -15,16 +17,20 @@ Packet DistanceVector::createDVPacket(unsigned short destID)
     packet.header.packetType = DV;
     packet.header.size = HEADER_SIZE + forwardingTable.table.size() * (2 * sizeof(router_id) + sizeof(cost)); // structure of payload entry: destID, nextHop, routeCost
     packet.header.sourceID = this->myRouterID;
-    packet.header.destID = destID;
+    packet.header.destID = neighborID; // note that destID in this context refers to destination of packet (which is different from destID in context of a route!)
 
     uint32_t offset = 0;
 
     for (const auto& nbr : forwardingTable.table) { // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
-            router_id destID = nbr.first;
+            router_id routeDestID = nbr.first;
             router_id nextHop = nbr.second.nextHop;
             cost routeCost = nbr.second.routeCost;
 
-            memcpy(packet.payload + offset, &destID, sizeof(router_id));
+            if (nextHop == neighborID) { // Poison Reverse: If a node (C) goes through its neighbor (B) to get to a route destination (A), then have C tell B its distance to A is infinite
+                routeCost = USHRT_MAX;
+            }
+
+            memcpy(packet.payload + offset, &routeDestID, sizeof(router_id));
             offset += sizeof(router_id);
             memcpy(packet.payload + offset, &nextHop, sizeof(router_id));
             offset += sizeof(router_id);
@@ -46,7 +52,7 @@ void DistanceVector::sendUpdates()
         PortStatusEntry portStatusEntry = port.second;
         if (portStatusEntry.isUp)
         {
-            Packet newDVPacket = createDVPacket(portStatusEntry.destRouterID);
+            Packet newDVPacket = createDVPacket(portStatusEntry.destRouterID); 
             void* serializedDVPacket = serializePacket(newDVPacket);
             sys->send(port.first, serializedDVPacket, newDVPacket.header.size);
         }
@@ -54,7 +60,7 @@ void DistanceVector::sendUpdates()
 }
 
 // THIS IS JUST THE "RECEIVING AN UPDATE" CASE.
-void DistanceVector::handleDVPacket(port_num port, Packet pongPacket)
+void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 {
     // TODO: PingPong phase needs to provide context for the initial DVs for each node.
     // The PingPong phase should also populate the initial forwarding tables for each node.
@@ -62,9 +68,9 @@ void DistanceVector::handleDVPacket(port_num port, Packet pongPacket)
     // check staleness of packet (idk how to do this yet)
 
     // unpack the payload into a DVTable struct
-    // DVPacketPayload dvPayload = deserializeDVPayload(pongPacket.payload);
-    int neighborID = pongPacket.header.sourceID;
-    DVForwardingTable dvPayload = deserializeDVPayload(pongPacket); // LET'S JUST ASSUME THIS IS WHAT DESERIALIZE DV PAYLOAD RETURNS, I'M PRETTY SURE THIS IS WHAT THE DISTANCE VECTORS SHOULD BE
+    // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
+    int neighborID = dvPacket.header.sourceID;
+    DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys); 
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
@@ -94,6 +100,8 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
     // get the neighbor ID from the port
     router_id neighborID = portStatus[port].destRouterID;
     bool updateRequired = false;
+    adjacencyList[neighborID].timeCost += changeCost; // Note to Daniel: always need to update adjacencyList, since that covers costs for each neighbor
+
     // update the routing table with the new cost
     for (auto row : forwardingTable.table)
     {
@@ -101,26 +109,27 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
         auto route = row.second;
         if (route.nextHop == neighborID)
         {
-            // special case where the route is just to the neighbor itself, set to changeCost
-            if (dest == neighborID)
-            {
-                forwardingTable.updateRoute(dest, neighborID, changeCost);
-            }
-            else
-            {
-                // add to current cost if the neighbor is just along the way
-                forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost);
-                // TODO: kinda sketchy to have to manage adjacency list and routing table but oh well
-                if (changeCost + route.routeCost < adjacencyList[neighborID].timeCost)
-                {
-                    adjacencyList[neighborID].timeCost = changeCost + route.routeCost;
-                    updateRequired = true;
-                }
-            }
+            // Note to Daniel: no need for the special case where nextHop==dest because changeCost is already the difference between old value and new value
+            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost); // TODO: pass in timestamp for freshness check
+            updateRequired = true; // since the forwardingTable only contains the least cost paths to destinations, if a route in the table must be updated, then a new min was found => must send updates            
         }
     }
     if (updateRequired)
         sendUpdates();
 }
 
-void updateDVFreshness();
+void DistanceVector::checkDVFreshness() {
+    // iterate through the forwarding table and remove any entries that have not been updated in the last 45 seconds
+    unordered_set<router_id> removeSet;
+    for (auto row : forwardingTable.table) {
+        router_id destID = row.first;
+        DVRoute route = row.second;
+        time_stamp currTime = sys->time();
+        if (currTime - route.lastUpdate > 45 * 1000) {
+            removeSet.insert(destID);
+        }
+    }
+    for (router_id destID : removeSet) {
+        forwardingTable.removeRoute(destID);
+    }
+};
