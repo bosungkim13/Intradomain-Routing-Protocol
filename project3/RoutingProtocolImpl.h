@@ -58,6 +58,7 @@ class RoutingProtocolImpl : public RoutingProtocol {
     unordered_map<router_id, router_id> forwardingTable; // Forwarding table
 
     LinkState myLSRP;
+    DistanceVector myDV;
 };
 
 #endif

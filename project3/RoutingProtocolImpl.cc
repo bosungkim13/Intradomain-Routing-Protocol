@@ -33,7 +33,12 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->sys->set_alarm(this, 30 * 1000, updateAlarm);
 
   // TODO: initialize link or distance vector protocol
-  this->myLSRP = LinkState(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, &this->forwardingTable, this->numPorts);
+  if (this->protocolType == LS) {
+    this->myLSRP = LinkState(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, &this->forwardingTable, this->numPorts);
+  } else if (this->protocolType == DV) {
+    this->myDV = DistanceVector(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, this->numPorts);
+  }
+
 }
 
 void RoutingProtocolImpl::handle_alarm(void *data) {
@@ -50,6 +55,7 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
         this->myLSRP.SendUpdates();
       } else {
         // DV
+        this->myDV.sendUpdates();
       }
       this->sys->set_alarm(this, 30 * 1000, data);
       break;
@@ -69,6 +75,19 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
 
       } else {
         // DV
+
+        // update port freshness
+        this->myDV.portExpiredCheck();  // TODO: ask if we should send updates after detecting an expired port. If so, how do we communicate this information?
+        this->myDV.dvEntryExpiredCheck(); // TODO: ask if we should send updates after detecting an expired DV entry. If so, how do we communicate this information?
+        // if (this->myDV.portExpiredCheck()) {
+        //   // port expired check updates the ports table so send updates doesn't send to dead ports
+        //   this->myDV.sendUpdates();
+        // }
+
+        // // update DV entry freshness
+        // if (this->myDV.dvEntryExpiredCheck()) {
+        //   this->myDV.sendUpdates();
+        // }
       }
       this->sys->set_alarm(this, 1 * 1000, data);
       break;
@@ -220,11 +239,20 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
     return;
   }
 
-  if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
-    // If the destination is in the forwarding table, send the packet to the next hop
-    sys->send(this->forwardingTable[destId], handleMe, dataPacket.header.size);
+  // this is poor design, but DV has its own separate instance of a forwarding table, so we need to use that one.
+  if (this->protocolType == LS) {
+    if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
+      // If the destination is in the forwarding table, send the packet to the next hop
+      sys->send(this->forwardingTable[destId], handleMe, dataPacket.header.size);
+    }
+  } else if (this->protocolType == DV) { 
+    if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {
+      // If the destination is in the forwarding table, send the packet to the next hop
+      sys->send(this->myDV.forwardingTable.table[destId].nextHop, handleMe, dataPacket.header.size);
   }
+  
   // If it makes it here, the destination is not in forwarding table and the packet is lost
   std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
 
+}
 }
