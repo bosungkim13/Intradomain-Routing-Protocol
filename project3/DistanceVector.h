@@ -12,7 +12,7 @@ public:
     DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts);
 
     // DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts);
-    ~DistanceVector(); // TODO: figure out destructor logic later
+    // ~DistanceVector(); // TODO: figure out destructor logic later
 
     Packet createDVPacket(unsigned short destID);
 
