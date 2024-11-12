@@ -28,6 +28,8 @@ struct DVForwardingTable
     unordered_map<router_id, DVRoute> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
     Node * context;
 
+    DVForwardingTable() : context(nullptr) {} // Default constructor is unused, but necessary for compilation
+    
     DVForwardingTable(Node * n) : context(n) {} // need to pass in Node pointer as context for getting the time.
 
     // Add or update a route for a destination

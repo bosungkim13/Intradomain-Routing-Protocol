@@ -6,7 +6,12 @@
 class DistanceVector
 {
 public:
-    DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts);
+    DVForwardingTable forwardingTable;
+
+    DistanceVector(); // Default constructor is unused, but necessary for compilation
+    DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts);
+
+    // DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts);
     ~DistanceVector(); // TODO: figure out destructor logic later
 
     Packet createDVPacket(unsigned short destID);
@@ -18,7 +23,9 @@ public:
 
     // Iterate through DV entries and remove those that have not been updated in the last 45 seconds
     // (this method will be called every 1 second)
-    void checkDVFreshness();
+    bool dvEntryExpiredCheck();
+
+    bool portExpiredCheck();
 
     void handleCostChange(port_num port, cost changeCost);
 
@@ -26,10 +33,8 @@ public:
 
 private:
     router_id myRouterID;
-    adjacencyList_ref adjacencyList;
-    portStatus_ref portStatus;
-    DVForwardingTable forwardingTable;
+    adjacencyList_ptr adjacencyList;
+    portStatus_ptr portStatus;
     Node *sys;
     port_num numPorts;
-    unsigned int seqNum = 0;
 };

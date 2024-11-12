@@ -4,7 +4,9 @@
 #include <climits>
 #include <unordered_set>
 
-DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
+DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nullptr), portStatus(nullptr), numPorts(0) {} // Default constructor is unused, but necessary for compilation
+DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
+// DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
 Packet DistanceVector::createDVPacket(unsigned short neighborID)
 {
@@ -47,7 +49,7 @@ void DistanceVector::sendUpdates()
     // but I think we already pass that in as reference (adjList_ref). Also it helps that the routing table contains the
     // neighbors already. (same nextHop and dest entries)
     // Michael: D
-    for (const auto& port : portStatus)
+    for (const auto& port : *portStatus)
     {
         PortStatusEntry portStatusEntry = port.second;
         if (portStatusEntry.isUp)
@@ -80,9 +82,9 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     {
         auto dest = row.first;
         auto nbrToDestRoute = row.second;
-        if (adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
+        if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
-            forwardingTable.updateRoute(dest, neighborID, adjacencyList[neighborID].timeCost + nbrToDestRoute.routeCost);
+            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost);
             updateRequired = true;
         }
     }
@@ -98,9 +100,9 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
 {
 
     // get the neighbor ID from the port
-    router_id neighborID = portStatus[port].destRouterID;
+    router_id neighborID = (*portStatus)[port].destRouterID;
     bool updateRequired = false;
-    adjacencyList[neighborID].timeCost += changeCost; // Note to Daniel: always need to update adjacencyList, since that covers costs for each neighbor
+    (*adjacencyList)[neighborID].timeCost += changeCost; // Note to Daniel: always need to update adjacencyList, since that covers costs for each neighbor
 
     // update the routing table with the new cost
     for (auto row : forwardingTable.table)
@@ -118,7 +120,7 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
         sendUpdates();
 }
 
-void DistanceVector::checkDVFreshness() {
+bool DistanceVector::dvEntryExpiredCheck() {
     // iterate through the forwarding table and remove any entries that have not been updated in the last 45 seconds
     unordered_set<router_id> removeSet;
     for (auto row : forwardingTable.table) {
@@ -132,4 +134,19 @@ void DistanceVector::checkDVFreshness() {
     for (router_id destID : removeSet) {
         forwardingTable.removeRoute(destID);
     }
+
+    return removeSet.size() > 0;
 };
+
+// TODO: adapt this to fit Distance Vector since we need to also update our DV table
+bool DistanceVector::portExpiredCheck() {
+    bool expired = false;
+    for (auto it = ((*this->portStatus).begin)(); it != (*this->portStatus).end(); it++) {
+        if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
+            it->second.timeCost = INFINITY_COST;
+            it->second.isUp = false;
+            expired = true;
+        }
+    }
+    return expired;
+}
