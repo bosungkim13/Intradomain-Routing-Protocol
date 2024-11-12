@@ -35,10 +35,11 @@ struct DVRoute
 {
     router_id nextHop; // ID of the next hop router
     cost routeCost;    // Cost to reach the destination via this route
+    time_stamp lastUpdate; // Time of last update
 
     // Constructor with default cost set to maximum value (representing infinity)
-    DVRoute(router_id hop = 0, cost c = std::numeric_limits<cost>::max())
-        : nextHop(hop), routeCost(c) {}
+    DVRoute(router_id hop = 0, cost c = USHRT_MAX, time_stamp t = 0)
+        : nextHop(hop), routeCost(c), lastUpdate(t) {}
 };
 
 // Distance Vector Forwarding Table
@@ -47,9 +48,9 @@ struct DVForwardingTable
     unordered_map<router_id, DVRoute> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
 
     // Add or update a route for a destination
-    void updateRoute(router_id destination, router_id nextHop, cost routeCost)
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, time_stamp lastUpdate)
     {
-        table[destination] = DVRoute(nextHop, routeCost);
+        table[destination] = DVRoute(nextHop, routeCost, lastUpdate);
     }
 
     // Get the route for a given destination, if it exists
@@ -61,7 +62,7 @@ struct DVForwardingTable
             return it->second;
         }
         // Return a route with max cost if destination is not found (infinity equivalent)
-        return DVRoute(0, std::numeric_limits<cost>::max());
+        return DVRoute(0, USHRT_MAX, 0);
     }
 
     // Remove a route for a given destination
