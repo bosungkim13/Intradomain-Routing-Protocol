@@ -2,10 +2,6 @@
 #include <cassert>
 #include <unordered_set>
 
-LinkState::LinkState(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts) 
-    : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {
-}
-
 Packet LinkState::CreatePacket(unsigned short size) {
     // TODO: do i need to malloc here? 
     Packet packet;
@@ -228,5 +224,30 @@ bool LinkState::NeedCostUpdated(router_id nbrId, unordered_map<router_id, cost> 
         }
         return false;
     }
+}
 
+bool LinkState::PortExpiredCheck() {
+    bool expired = false;
+    for (auto it = this->portStatus.begin(); it != this->portStatus.end(); it++) {
+        if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
+            it->second.timeCost = INFINITY_COST;
+            it->second.isUp = false;
+            expired = true;
+        }
+    }
+    return expired;
+}
+
+bool LinkState::NodeTableExpiredCheck() {
+    unsigned int currTime = this->sys->time();
+    bool expired = false;
+
+    for (auto it: this->nodeTable) {
+        currTime = this->sys->time();
+        if (currTime - it.second.lastUpdate >= 45 * 1000) {
+            expired = true;
+            this->nodeTable.erase(it.first);
+        }
+    }
+    return expired;
 }

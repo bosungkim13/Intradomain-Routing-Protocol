@@ -3,6 +3,8 @@
 
 #include "RoutingProtocol.h"
 #include "Node.h"
+#include "LinkState.h"
+#include "DistanceVector.h"
 
 class RoutingProtocolImpl : public RoutingProtocol {
   public:
@@ -39,6 +41,7 @@ class RoutingProtocolImpl : public RoutingProtocol {
     void sendPings();
     void handlePings(unsigned short port, Packet pingPacket);
     void handlePongs(unsigned short port, Packet pongPacket);
+    void handleData(unsigned short port, void* dataPacket);
     // Send some pings to neighbors
 
     void updatePortFreshness();
@@ -53,6 +56,8 @@ class RoutingProtocolImpl : public RoutingProtocol {
     unordered_map<port_num, PortStatusEntry> portStatus; // Port status map
     unordered_map<router_id, Neighbor> adjacencyList; // Adjacency list
     unordered_map<router_id, router_id> forwardingTable; // Forwarding table
+
+    LinkState myLSRP;
 };
 
 #endif

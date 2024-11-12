@@ -33,7 +33,7 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->sys->set_alarm(this, 30 * 1000, updateAlarm);
 
   // TODO: initialize link or distance vector protocol
-
+  this->myLSRP.init(this->sys, this->routerID, this->adjacencyList, this->portStatus, this->forwardingTable, this->numPorts);
 }
 
 void RoutingProtocolImpl::handle_alarm(void *data) {
@@ -45,8 +45,32 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
       this->sys->set_alarm(this, 10 * 1000, data);
       break;
     case UpdateAlarm:
+      if (protocolType == P_LS) {
+        // LS
+        this->myLSRP.SendUpdates();
+      } else {
+        // DV
+      }
+      this->sys->set_alarm(this, 30 * 1000, data);
       break;
     case FreshnessAlarm:
+      // check link every second
+      if (protocolType == P_LS) {
+        if (this->myLSRP.PortExpiredCheck()) {
+          // port expired check updates the table so send updates doesn't send to dead ports
+          this->myLSRP.SendUpdates();
+        }
+
+        // update freshness
+        if (this->myLSRP.NodeTableExpiredCheck()) {
+          // updates routing table based on current link state table
+          this->myLSRP.UpdateTable();
+        }
+
+      } else {
+        // DV
+      }
+      this->sys->set_alarm(this, 1 * 1000, data);
       break;
     default:
       std::cout << "handle_alarm(): Unknown alarm type." << std::endl;
@@ -64,6 +88,13 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
       break;
     case PONG:
       // Handle PONG packet
+      break;
+    case DATA:
+      // Handle DATA packet
+      this->handleData(port, packet);
+    case LS:
+      // Handle LS packet
+      this->myLSRP.HandlePacket(port, packet, size);
       break;
     default:
       // Handle unknown packet type
@@ -173,4 +204,27 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     }
 
   }
+}
+
+void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
+  // TODO: Implement this method to handle DATA packets
+  //       (this method will be called every time a DATA packet is received)
+  Packet dataPacket = deserializePacket(handleMe);
+  router_id destId = dataPacket.header.destID;
+  if (dataPacket.header.packetType != DATA) {
+    std::cout << "handleData(): Packet type is not DATA." << std::endl;
+  }
+
+  if (destId == this->routerID) {
+    delete[] static_cast<char*>(handleMe);
+    return;
+  }
+
+  if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
+    // If the destination is in the forwarding table, send the packet to the next hop
+    sys->send(this->forwardingTable[destId], handleMe, dataPacket.header.size);
+  }
+  // If it makes it here, the destination is not in forwarding table and the packet is lost
+  std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
+
 }

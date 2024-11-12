@@ -22,6 +22,15 @@ struct Neighbor {
     Neighbor(port_num p, cost c) : port(p), timeCost(c) {}
 };
 
+// Define PortSatusEntry struct
+struct PortStatusEntry {
+    time_stamp lastUpdate;
+    cost timeCost;
+    router_id destRouterID;
+    bool isUp;
+    PortStatusEntry() : lastUpdate(0), timeCost(0), destRouterID(0), isUp(false) {}
+};
+
 typedef std::unordered_map<router_id, int>& seqNum_ref;
 typedef std::unordered_map<router_id, Neighbor>& adjacencyList_ref; // Adjust type as needed
 typedef std::unordered_map<port_num, PortStatusEntry>& portStatus_ref; // Adjust type as needed
@@ -44,15 +53,6 @@ struct Packet {
     PacketHeader header; // Packet header
     char payload[MAX_PAYLOAD_SIZE];
     Packet() {} // Default constructor
-};
-
-// Define PortSatusEntry struct
-struct PortStatusEntry {
-    time_stamp lastUpdate;
-    cost timeCost;
-    router_id destRouterID;
-    bool isUp;
-    PortStatusEntry() : lastUpdate(0), timeCost(0), destRouterID(0), isUp(false) {}
 };
 
 enum eAlarmType {

@@ -24,7 +24,14 @@ class LinkState {
 
         bool NeedCostUpdated(router_id nbrId, unordered_map<router_id, cost> neighborCostTable);
 
-        LinkState(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts);
+        void init(Node* n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, forwardingTable_ref forwardingTable, port_num numPorts);
+
+        bool PortExpiredCheck();
+
+        // check if entry in node table has expired and removes it
+        bool NodeTableExpiredCheck();
+
+        LinkState();
         ~LinkState();
     private:
         router_id myRouterID;
