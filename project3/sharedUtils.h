@@ -22,7 +22,7 @@ struct Neighbor {
     Neighbor(port_num p, cost c) : port(p), timeCost(c) {}
 };
 
-// Define PortSatusEntry struct
+// Define PortStatusEntry struct
 struct PortStatusEntry {
     time_stamp lastUpdate;
     cost timeCost;

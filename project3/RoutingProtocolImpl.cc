@@ -183,47 +183,60 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   time_stamp rtt = currTimestamp - prevTimestamp;
   std::cout << "handlePongs(): RTT = " << rtt << std::endl;
 
-  // Use the PONG packet's source ID to discover the ID of its current neighbor and update that port's information
-  portStatus[port].destRouterID = pongPacket.header.sourceID;
+  // Use the PONG packet's source ID to discover the ID of its current neighbor
+  router_id destID = pongPacket.header.sourceID;
+
+  // If we didn't previously know port, create port -> PortStatusEntry mapping 
+  if (portStatus.find(port) == portStatus.end()) {
+    portStatus[port] = PortStatusEntry();
+  }
+
+  // Update that port's information
+  portStatus[port].destRouterID = destID;
   bool wasUp = portStatus[port].isUp;
   portStatus[port].isUp = true;
   portStatus[port].lastUpdate = currTimestamp;
   portStatus[port].timeCost = rtt;
 
-  // check if we have connected before
-  if (adjacencyList.count(pongPacket.header.sourceID) && wasUp) {
-    // If the neighbor is already in the adjacency list, update the time cost
-    adjacencyList[pongPacket.header.sourceID].port = port;
-    cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;
-    adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
-    std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
-    std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
+  // If we didn't previously have destID as a neighbor, create destID -> neighbor (port, timecost) mapping 
+  if (adjacencyList.find(destID) == adjacencyList.end()) {
+    adjacencyList[destID] = Neighbor(port, 0);
+  }
 
-    if (adjacencyList[pongPacket.header.sourceID].timeCost != oldTimeCost) {
-      // Time cost has changed
+  adjacencyList[pongPacket.header.sourceID].port = port;
+  cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;  // Note: if the destID has just been added to adjList, timeCost will be 0
+  adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
+  std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
+  std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
 
-      if (protocolType == P_LS) {
-          // for link state routing protocol, we need to update since cost changes
-          this->myLSRP.UpdateTable();
-          // send updates to all neighbors
-          this->myLSRP.SendUpdates();
-      }
-
-    } else {
-      // Time cost has not changed
-      adjacencyList[pongPacket.header.sourceID]= Neighbor(port, rtt);
-
-      if (protocolType == P_LS) {
+  if (protocolType == P_DV) {
+    // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
+    cost changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
+    this->myDV.handleCostChange(port, changeCost);
+    // send updates to all neighbors
+    this->myDV.sendUpdates();
+  } else if (protocolType == P_LS) {
+    // preserving the behavior 
+    if (wasUp) {
+      // If this port was previously up, only send updates if time cost changed
+      if (adjacencyList[pongPacket.header.sourceID].timeCost != oldTimeCost) {
+        // Time cost has changed
+        // for link state routing protocol, we need to update since cost changes
         this->myLSRP.UpdateTable();
+        // send updates to all neighbors
         this->myLSRP.SendUpdates();
       }
-
-      // Update the forwarding table? Should alwasy be the same
+    } else {
+      // Update the forwarding table? Should always be the same as
       assert(forwardingTable[port] == pongPacket.header.sourceID);
       forwardingTable[port] = pongPacket.header.sourceID;
 
+      // If port was not previously up, send updates no matter what
+      // for link state routing protocol, we need to update since cost changes
+      this->myLSRP.UpdateTable();
+      // send updates to all neighbors
+      this->myLSRP.SendUpdates();
     }
-
   }
 }
 
