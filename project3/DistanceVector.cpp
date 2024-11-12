@@ -6,6 +6,9 @@ DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nu
 DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
 // DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
+// Populate a distance vector packet and set the packet's destination as
+// neighborID (since DV packets are only sent to immediate neighbors)
+// NOTE: values are still in host order (serializePacket will convert endianness to network order)
 Packet DistanceVector::createDVPacket(unsigned short neighborID)
 {
 
@@ -17,10 +20,11 @@ Packet DistanceVector::createDVPacket(unsigned short neighborID)
     packet.header.packetType = DV;
     packet.header.size = HEADER_SIZE + forwardingTable.table.size() * (2 * sizeof(router_id) + sizeof(cost)); // structure of payload entry: destID, nextHop, routeCost
     packet.header.sourceID = this->myRouterID;
-    packet.header.destID = neighborID; // note that destID in this context refers to destination of packet (which is different from destID in context of a route!)
+    packet.header.destID = neighborID; // DV packets are just sent to neighbors
 
     uint32_t offset = 0;
 
+    // Serialize relevant information from forwarding table into packet's payload
     for (const auto& nbr : forwardingTable.table) { // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
             router_id routeDestID = nbr.first;
             router_id nextHop = nbr.second.nextHop;
@@ -52,9 +56,9 @@ void DistanceVector::sendUpdates()
         PortStatusEntry portStatusEntry = port.second;
         if (portStatusEntry.isUp)
         {
-            Packet newDVPacket = createDVPacket(portStatusEntry.destRouterID); 
-            void* serializedDVPacket = serializePacket(newDVPacket);
-            sys->send(port.first, serializedDVPacket, newDVPacket.header.size);
+            Packet dvPacket = createDVPacket(portStatusEntry.destRouterID); // set destination as neighborID
+            void* serializedDVPacket = serializePacket(dvPacket);
+            sys->send(port.first, serializedDVPacket, dvPacket.header.size);
         }
     }
 }

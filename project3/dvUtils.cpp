@@ -50,13 +50,13 @@ DVForwardingTable deserializeDVPayload(Packet packet, Node * n)
         cost routeCost;
 
         
-        destID = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        destID = ntohs(*reinterpret_cast<unsigned short*>(&packet.payload[offset]));
         offset += sizeof(router_id);
 
-        nextHop = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        nextHop = ntohs(*reinterpret_cast<unsigned short*>(&packet.payload[offset]));
         offset += sizeof(router_id);
 
-        routeCost = ntohs(*reinterpret_cast<unsigned short*>(packet.payload[offset]));
+        routeCost = ntohs(*reinterpret_cast<unsigned short*>(&packet.payload[offset]));
         offset += sizeof(cost);
 
         table.updateRoute(destID, nextHop, routeCost); // updateRoute should already take care of the timestamp stuff

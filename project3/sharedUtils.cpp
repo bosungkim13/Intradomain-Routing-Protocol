@@ -4,7 +4,7 @@
 void* serializePacket(Packet serializeMe) {
     // Copy the packet header with endian conversion
     PacketHeader header = serializeMe.header;
-    unsigned short mySize = header.size;
+    unsigned short mySize = header.size; // Have variable store the host ordered size field
     header.size = htons(header.size);
     header.sourceID = htons(header.sourceID);
     header.destID = htons(header.destID);
@@ -14,8 +14,12 @@ void* serializePacket(Packet serializeMe) {
     if (buffer == nullptr) {
         return nullptr; // Check for allocation failure
     }
+    std::cout << "serializePacket successfully malloc'd mySize = " << mySize << " bytes" << std::endl; // debug code
+
 
     memcpy(buffer, &header, HEADER_SIZE);
+    std::cout << "serializePacket successfully memcpy'd header with HEADER_SIZE = " << HEADER_SIZE << " bytes" << std::endl; // debug code
+
 
     // Copy the payload. Could be less than the maximum payload size.
     int offset = HEADER_SIZE;
@@ -37,21 +41,24 @@ void* serializePacket(Packet serializeMe) {
             offset += sizeof(cost);
         }
     } else if (header.packetType == DV) {
-        unsigned int numEntries = (header.size - HEADER_SIZE) / (2 * sizeof(router_id) + sizeof(cost));
+        std::cout << "serializePacket entered DV code block" << std::endl; // debug code
 
-        assert((header.size - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) == 0); // TEMPORARY CODE, DELETE LATER
+        unsigned int numEntries = (mySize - HEADER_SIZE) / (2 * sizeof(router_id) + sizeof(cost)); 
+        std::cout << "serializePacket DV numEntries calculated as " << numEntries << " with remainder = " << (mySize - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) << std::endl; // debug code
+
+        assert((mySize - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) == 0); // TEMPORARY CODE, DELETE LATER
 
         // For the rest of the payload, it alternates between destination ID, nextHop ID, and routeCost
         for (unsigned int i = 0; i < numEntries; i++) {
-            unsigned short destID = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            unsigned short destID = htons(*reinterpret_cast<unsigned short*>(&serializeMe.payload[offset - HEADER_SIZE]));
             memcpy((char*)buffer + offset, &destID, sizeof(router_id));
             offset += sizeof(router_id);
 
-            unsigned short nextHopID = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            unsigned short nextHopID = htons(*reinterpret_cast<unsigned short*>(&serializeMe.payload[offset - HEADER_SIZE]));
             memcpy((char*)buffer + offset, &nextHopID, sizeof(router_id));
             offset += sizeof(router_id);
 
-            unsigned short routeCost = htons(*reinterpret_cast<unsigned short*>(serializeMe.payload[offset - HEADER_SIZE]));
+            unsigned short routeCost = htons(*reinterpret_cast<unsigned short*>(&serializeMe.payload[offset - HEADER_SIZE]));
             memcpy((char*)buffer + offset, &routeCost, sizeof(cost));
             offset += sizeof(cost);
         }
