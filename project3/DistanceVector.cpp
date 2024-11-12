@@ -136,15 +136,20 @@ bool DistanceVector::dvEntryExpiredCheck() {
     return removeSet.size() > 0;
 };
 
-// TODO: adapt this to fit Distance Vector since we need to also update our DV table
 bool DistanceVector::portExpiredCheck() {
     bool expired = false;
+    unordered_set<router_id> removeSet;
     for (auto it = ((*this->portStatus).begin)(); it != (*this->portStatus).end(); it++) {
         if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;
-            expired = true;
+            removeSet.insert(it->second.destRouterID);
         }
     }
-    return expired;
+
+    for (router_id destID : removeSet) {
+        this->forwardingTable.removeRoute(destID);
+    }
+
+    return removeSet.size() > 0;
 }

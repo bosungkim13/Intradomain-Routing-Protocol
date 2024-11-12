@@ -32,7 +32,7 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->sys->set_alarm(this, 10 * 1000, ppAlarm);
   this->sys->set_alarm(this, 30 * 1000, updateAlarm);
 
-  // TODO: initialize link or distance vector protocol
+  // initialize link or distance vector protocol
   if (this->protocolType == P_LS) {
     this->myLSRP = LinkState(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, &this->forwardingTable, this->numPorts);
   } else if (this->protocolType == P_DV) {
@@ -77,17 +77,15 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
         // DV
 
         // update port freshness
-        this->myDV.portExpiredCheck();  // TODO: ask if we should send updates after detecting an expired port. If so, how do we communicate this information?
-        this->myDV.dvEntryExpiredCheck(); // TODO: ask if we should send updates after detecting an expired DV entry. If so, how do we communicate this information?
-        // if (this->myDV.portExpiredCheck()) {
-        //   // port expired check updates the ports table so send updates doesn't send to dead ports
-        //   this->myDV.sendUpdates();
-        // }
+        if (this->myDV.portExpiredCheck()) {
+          // port expired check updates the ports table so send updates doesn't send to dead ports
+          this->myDV.sendUpdates();
+        }
 
-        // // update DV entry freshness
-        // if (this->myDV.dvEntryExpiredCheck()) {
-        //   this->myDV.sendUpdates();
-        // }
+        // update DV entry freshness
+        if (this->myDV.dvEntryExpiredCheck()) {
+          this->myDV.sendUpdates();
+        }
       }
       this->sys->set_alarm(this, 1 * 1000, data);
       break;
@@ -107,6 +105,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
       break;
     case PONG:
       // Handle PONG packet
+      this->handlePongs(port, deserializedPacket);
       break;
     case DATA:
       // Handle DATA packet
@@ -115,6 +114,9 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
       // Handle LS packet
       this->myLSRP.HandlePacket(port, packet, size);
       break;
+    case DV:
+      // Handle DV packet
+      this->myDV.handleDVPacket(port, deserializedPacket);
     default:
       // Handle unknown packet type
       break;
