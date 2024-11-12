@@ -10,28 +10,6 @@
 #include <arpa/inet.h>
 #include <Node.h>
 
-
-// // Distance Vector Packet Payload
-
-// struct DVPacketPayload
-// {
-//     seq_num sequenceNumber; // 16-bit sequence number
-
-//     // I think it makes more sense to store the routing table, because the neighbors are already in there.
-//     std::vector<std::pair<router_id, time_stamp>> neighbors; // Vector of (neighborId, cost) pairs
-
-//     // Constructor to initialize sequence number
-//     // I don't think DV requires a sequence number.
-//     DVPacketPayload(seq_num seqNum) : sequenceNumber(seqNum) {}
-
-//     // Add a neighbor entry with id and cost
-//     void addNeighbor(router_id neighborId, time_stamp cost)
-//     {
-//         neighbors.emplace_back(neighborId, cost); // emplace_back() constructs element directly at the end of container to avoid temp variable
-//     }
-// };
-
-
 // Distance Vector Route struct is used within the Distance Vector Routing Table
 struct DVRoute
 {
@@ -40,7 +18,7 @@ struct DVRoute
     time_stamp lastUpdate; // Time of last update
 
     // Constructor with default cost set to maximum value (representing infinity)
-    DVRoute(router_id hop = 0, cost c = std::numeric_limits<cost>::max(), time_stamp t = 0)
+    DVRoute(router_id hop = 0, cost c = USHRT_MAX, time_stamp t = 0)
         : nextHop(hop), routeCost(c), lastUpdate(t) {}
 };
 
@@ -67,7 +45,7 @@ struct DVForwardingTable
             return it->second;
         }
         // Return a route with max cost if destination is not found (infinity equivalent)
-        return DVRoute(0, std::numeric_limits<cost>::max(), context->time()); // return the current time for now?
+        return DVRoute(0, USHRT_MAX, context->time()); // return the current time for now?
     }
 
     // Remove a route for a given destination
@@ -80,12 +58,6 @@ struct DVForwardingTable
     bool hasRoute(router_id destination) const
     {
         return table.find(destination) != table.end();
-    }
-
-    // check if a route is fresh
-    bool isFresh(router_id destination) const
-    {
-        return context->time() - table.at(destination).lastUpdate < 45000;
     }
 };
 
