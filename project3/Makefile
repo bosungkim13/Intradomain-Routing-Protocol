@@ -7,7 +7,10 @@ OBJS =\
 	Link.o\
 	Node.o\
 	RoutingProtocolImpl.o\
-	Simulator.o
+	Simulator.o\
+	LinkState.o\
+	lsUtils.o\
+	sharedUtils.o
 
 %.o: %.cc
 	$(CC) $(COPTS) -c $< -o $@
@@ -22,7 +25,11 @@ Event.o: Event.h Link.h Node.h Simulator.h
 Link.o: Event.h Link.h Node.h Simulator.h
 Node.o: Event.h Link.h Node.h Simulator.h
 Simulator.o: Event.h Link.h Node.h RoutingProtocol.h Simulator.h 
-RoutingProtocolImpl.o: RoutingProtocolImpl.h
+RoutingProtocolImpl.o: RoutingProtocolImpl.h LinkState.h
+
+LinkState.o: LinkState.h
+lsUtils.o: lsUtils.h
+sharedUtils.o: sharedUtils.h
 
 clean:
 	rm -f *.o Simulator
