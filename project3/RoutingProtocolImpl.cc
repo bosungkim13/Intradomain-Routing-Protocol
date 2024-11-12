@@ -1,7 +1,7 @@
 #include "RoutingProtocolImpl.h"
-#include <global.h>
+#include "global.h"
 #include <sys/time.h>
-#include <sharedUtils.h>
+#include "sharedUtils.h"
 #include <cassert>
 
 RoutingProtocolImpl::RoutingProtocolImpl(Node *n) : RoutingProtocol(n) {
@@ -33,7 +33,7 @@ void RoutingProtocolImpl::init(unsigned short num_ports, unsigned short router_i
   this->sys->set_alarm(this, 30 * 1000, updateAlarm);
 
   // TODO: initialize link or distance vector protocol
-  this->myLSRP.init(this->sys, this->routerID, this->adjacencyList, this->portStatus, this->forwardingTable, this->numPorts);
+  this->myLSRP = LinkState(this->sys, this->routerID, &this->adjacencyList, &this->portStatus, &this->forwardingTable, this->numPorts);
 }
 
 void RoutingProtocolImpl::handle_alarm(void *data) {
@@ -115,7 +115,7 @@ void RoutingProtocolImpl::sendPings() {
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
 
     PacketHeader *packetHeader = &packet.header;
-    packetHeader->packetType = htons(PING); // Set packet type
+    packetHeader->packetType = PING; // Set packet type
     packetHeader->size = htons(size); // Set packet size
     packetHeader->sourceID = htons(routerID); // Set source ID
 
@@ -145,7 +145,7 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.sourceID = this->routerID;
 
   void *serializedPongPacket = serializePacket(pingPacket);
-  sys->send(port, serializedPongPacket, sizeof(Packet));
+  sys->send(port, serializedPongPacket, pingPacket.header.size);
 }
 
 /*
@@ -183,9 +183,9 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
 
       if (protocolType == P_LS) {
           // for link state routing protocol, we need to update since cost changes
-          // myLSRP->updateTable();
+          this->myLSRP.UpdateTable();
           // send updates to all neighbors
-          // myLSRP->sendUpdates();
+          this->myLSRP.SendUpdates();
       }
 
     } else {
@@ -193,8 +193,8 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
       adjacencyList[pongPacket.header.sourceID]= Neighbor(port, rtt);
 
       if (protocolType == P_LS) {
-        // myLSRP->updateTable();
-        // myLSRP->sendUpdates();
+        this->myLSRP.UpdateTable();
+        this->myLSRP.SendUpdates();
       }
 
       // Update the forwarding table? Should alwasy be the same

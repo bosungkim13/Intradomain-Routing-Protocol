@@ -66,7 +66,7 @@ class Simulator {
  private:
   string trim(string s);
   std::unordered_map<int, Node *> node_table;
-  std::unordered_map<int_pair, Link *, hash_pair, equal_pair> link_table;
+  std::unordered_map<int_pair, Link *, __gnu_cxx::hash_pair, equal_pair> link_table;
   //end of pyuan
 
   //twngan added

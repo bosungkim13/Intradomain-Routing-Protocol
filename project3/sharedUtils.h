@@ -1,7 +1,7 @@
 #ifndef SHAREDUTILS_H
 #define SHAREDUTILS_H
-#include <global.h>
-#include <Node.h>
+#include "global.h"
+#include "Node.h"
 
 #define MAX_PACKET_SIZE 65535 // 2^16 - 1
 #define HEADER_SIZE sizeof(PacketHeader)
@@ -32,9 +32,13 @@ struct PortStatusEntry {
 };
 
 typedef std::unordered_map<router_id, int>& seqNum_ref;
-typedef std::unordered_map<router_id, Neighbor>& adjacencyList_ref; // Adjust type as needed
-typedef std::unordered_map<port_num, PortStatusEntry>& portStatus_ref; // Adjust type as needed
-typedef std::unordered_map<router_id, router_id>& forwardingTable_ref;    // Adjust type as needed
+typedef std::unordered_map<router_id, Neighbor>& adjacencyList_ref;
+typedef std::unordered_map<port_num, PortStatusEntry>& portStatus_ref;
+typedef std::unordered_map<router_id, router_id>& forwardingTable_ref;
+
+typedef std::unordered_map<router_id, Neighbor>* adjacencyList_ptr; 
+typedef std::unordered_map<port_num, PortStatusEntry>* portStatus_ptr;
+typedef std::unordered_map<router_id, router_id>* forwardingTable_ptr;
 
 // Define PacketHeader struct
 struct PacketHeader {
@@ -44,7 +48,7 @@ struct PacketHeader {
     unsigned short sourceID; // 16-bit source router ID
     unsigned short destID; // 16-bit destination router ID
     PacketHeader(unsigned char type, unsigned short size, unsigned short srcID, unsigned short dstID)
-    : packetType(type), size(size), sourceID(srcID), destID(dstID), reserved(0) {} // Initialize members
+    : packetType(type), reserved(0), size(size), sourceID(srcID), destID(dstID) {} // Initialize members
     PacketHeader() : packetType(0), reserved(0), size(0), sourceID(0), destID(0) {} // Default constructor
 };
 

@@ -2,6 +2,11 @@
 #include <cassert>
 #include <unordered_set>
 
+
+LinkState::LinkState() : sys(nullptr), myRouterID(0), adjacencyList(nullptr), portStatus(nullptr), forwardingTable(nullptr), numPorts(0), seqNum(0) {}
+
+LinkState::LinkState(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, forwardingTable_ptr forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
+
 Packet LinkState::CreatePacket(unsigned short size) {
     // TODO: do i need to malloc here? 
     Packet packet;
@@ -13,14 +18,14 @@ Packet LinkState::CreatePacket(unsigned short size) {
     
     memcpy(packet.payload, &this->seqNum, sizeof(this->seqNum));
     int offset = sizeof(this->seqNum); // Update index to start after seqNum
-    for (auto nbr: this->adjacencyList) {
+    for (auto nbr: (*this->adjacencyList)) {
         auto neighborID = nbr.first;
-        auto cost = nbr.second.timeCost;
+        auto nbrCost = nbr.second.timeCost;
 
         // Add neighbor ID and cost to the payload
         memcpy(packet.payload + offset, &neighborID, sizeof(neighborID));
         offset += sizeof(neighborID);
-        memcpy(packet.payload + offset, &cost, sizeof(cost));
+        memcpy(packet.payload + offset, &nbrCost, sizeof(cost));
         offset += sizeof(cost);
     }
     assert(offset <= MAX_PAYLOAD_SIZE);
@@ -31,14 +36,14 @@ void LinkState::SendUpdates() {
     // Send updates to all neighbors
     // Each neighbor will have its port number and cost (2 + 2 = 4 bytes)
     // Header size is 12 bytes and seqNum is 4 bytes which is start of payload
-    unsigned int size = adjacencyList.size() * 4 + HEADER_SIZE + sizeof(seqNum);
+    unsigned int size = this->adjacencyList->size() * 4 + HEADER_SIZE + sizeof(seqNum);
     assert(12 == HEADER_SIZE);
 
     for (port_num portId = 0; portId < this->numPorts; portId++) {
-        auto pit = portStatus.find(portId);
+        auto pit = this->portStatus->find(portId);
 
         // continue if port is detached
-        if (pit == portStatus.end() || !(pit->second.isUp)) {
+        if (pit == this->portStatus->end() || !(pit->second.isUp)) {
             continue;
         }
 
@@ -61,10 +66,10 @@ void LinkState::FloodUpdates(port_num myPort, void* floodMe, unsigned short size
 
 void LinkState::UpdateTable() {
     // destination router : <current router ID, cost>
-    unordered_map<router_id, std::pair<router_id, cost>> activeDistances;
+    unordered_map<router_id, std::pair<router_id, cost> > activeDistances;
 
     // adjacent routers to current router
-    for (auto entry = portStatus.begin(); entry != portStatus.end(); entry++) {
+    for (auto entry = this->portStatus->begin(); entry != this->portStatus->end(); entry++) {
         PortStatusEntry pEntry = entry->second;
         if (pEntry.isUp) {
             activeDistances[pEntry.destRouterID] = std::make_pair(this->myRouterID, pEntry.timeCost);
@@ -126,12 +131,12 @@ void LinkState::UpdateTable() {
             ls_path_info newPathInfo(destId, sys->time(), oldDistance.second);
             nodeTable[destId] = newPathInfo;
             // update forwarding table if cheaper path is found
-            forwardingTable[destId] = this->FindNextHop(activeDistances, destId);
+            (*forwardingTable)[destId] = this->FindNextHop(activeDistances, destId);
         }
     }
 }
 
-router_id LinkState::FindNextHop(unordered_map<router_id, std::pair<router_id, cost>> activeDistances, router_id destId) {
+router_id LinkState::FindNextHop(unordered_map<router_id, std::pair<router_id, cost> > activeDistances, router_id destId) {
     router_id currDest = destId;
     // start at destination and find where do I need to hop next?
     while (activeDistances[currDest].first != this->myRouterID) {
@@ -228,7 +233,7 @@ bool LinkState::NeedCostUpdated(router_id nbrId, unordered_map<router_id, cost> 
 
 bool LinkState::PortExpiredCheck() {
     bool expired = false;
-    for (auto it = this->portStatus.begin(); it != this->portStatus.end(); it++) {
+    for (auto it = this->portStatus->begin(); it != this->portStatus->end(); it++) {
         if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;

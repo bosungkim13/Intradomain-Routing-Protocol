@@ -11,7 +11,8 @@
 
 #include <iostream>
 using namespace std;
-using namespace __gnu_cxx;
+// TODO: REMOVED BECAUSE OF COMPILE ERROR
+// using namespace __gnu_cxx;
 
 #define DEFAULT_DELAY 0.1
 #define DEFAULT_PROB 0.8
