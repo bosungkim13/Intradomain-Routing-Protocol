@@ -1,4 +1,5 @@
 #include "dvUtils.h"
+#include "VariadicTable.h"
 
 DVRoute::DVRoute(router_id hop, cost c, time_stamp t)
     : nextHop(hop), routeCost(c), lastUpdate(t) {};
@@ -11,6 +12,8 @@ DVForwardingTable::DVForwardingTable()
 
 void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost)
 {
+    // print update statement for debug
+    cout << "Updating route to " << destination << " via " << nextHop << " with cost " << routeCost << endl;
     table[destination] = DVRoute(nextHop, routeCost, context->time());
 }
 
@@ -27,12 +30,24 @@ DVRoute DVForwardingTable::getRoute(router_id destination) const
 
 void DVForwardingTable::removeRoute(router_id destination)
 {
+    // print for debug
+    cout << "Removing route to " << destination << endl;
     table.erase(destination);
 }
 
 bool DVForwardingTable::hasRoute(router_id destination) const
 {
     return table.find(destination) != table.end();
+}
+
+void DVForwardingTable::printTable()
+{
+    VariadicTable<router_id, router_id, cost, time_stamp> vt({"Destination", "Next Hop", "Route Cost", "Last Update"});
+    for (auto row : table)
+    {
+        vt.addRow(row.first, row.second.nextHop, row.second.routeCost, row.second.lastUpdate);
+    }
+    vt.print(cout);
 }
 
 DVForwardingTable deserializeDVPayload(Packet packet, Node * n) 
@@ -61,6 +76,6 @@ DVForwardingTable deserializeDVPayload(Packet packet, Node * n)
 
         table.updateRoute(destID, nextHop, routeCost); // updateRoute should already take care of the timestamp stuff
     }
-
+    
     return table;
 }
