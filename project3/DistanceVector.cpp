@@ -74,7 +74,11 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
     int neighborID = dvPacket.header.sourceID;
-    DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys); 
+    DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
+
+    // print received forwarding table
+    cout << "DV Payload received. Table contents:" << endl;
+    dvPayload.printTable();
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
@@ -93,8 +97,11 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     }
 
     // if the table was updated, send out a new DV packet to all neighbors
-    if (updateRequired)
+    if (updateRequired) {
+        cout << "Update required, new table is: " << endl;
+        forwardingTable.printTable();
         sendUpdates();
+    }
 };
 
 // function that handles changes in neighbor to neighbor cost, determined from
@@ -107,8 +114,10 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 //  those have been updated in RoutingProtocolImpl.cc before delegating to this
 void DistanceVector::handleCostChange(port_num port, cost changeCost)
 {
-    // Get the neighbor ID from the port
-    router_id neighborID = (*portStatus)[port].destRouterID;
+    cout << "Cost change detected! Old cost: " << (*portStatus)[port].timeCost - changeCost << ", New cost: " << (*portStatus)[port].timeCost << endl;
+    cout << "Old table for Router ID: " << this->myRouterID << endl;
+    forwardingTable.printTable();
+    router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
     // Update any routing table entries that use this link (uses neighborID as nextHop) with the new cost
     for (auto row : forwardingTable.table)
@@ -125,6 +134,9 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
     if (forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
         forwardingTable.updateRoute(neighborID, neighborID, changeCost); 
     }
+
+    cout << "New table for Router ID: " << this->myRouterID << endl;
+    forwardingTable.printTable();
 }
 
 bool DistanceVector::dvEntryExpiredCheck() {
@@ -140,6 +152,11 @@ bool DistanceVector::dvEntryExpiredCheck() {
     }
     for (router_id destID : removeSet) {
         forwardingTable.removeRoute(destID);
+    }
+
+    // print destination that expired
+    for (router_id destID : removeSet) {
+        cout << "Destination " << destID << " has expired and will be removed." << endl;
     }
 
     return removeSet.size() > 0;

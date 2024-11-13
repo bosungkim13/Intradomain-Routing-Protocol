@@ -41,6 +41,8 @@ struct DVForwardingTable
 
     // Check if a route exists for a destination
     bool hasRoute(router_id destination) const;
+
+    void printTable();
 };
 
 DVForwardingTable deserializeDVPayload(Packet packet, Node * n);
