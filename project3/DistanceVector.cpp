@@ -6,6 +6,9 @@ DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nu
 DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
 // DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
+// Populate a distance vector packet and set the packet's destination as
+// neighborID (since DV packets are only sent to immediate neighbors)
+// NOTE: values are still in host order (serializePacket will convert endianness to network order)
 Packet DistanceVector::createDVPacket(unsigned short neighborID)
 {
 
@@ -17,10 +20,11 @@ Packet DistanceVector::createDVPacket(unsigned short neighborID)
     packet.header.packetType = DV;
     packet.header.size = HEADER_SIZE + forwardingTable.table.size() * (2 * sizeof(router_id) + sizeof(cost)); // structure of payload entry: destID, nextHop, routeCost
     packet.header.sourceID = this->myRouterID;
-    packet.header.destID = neighborID; // note that destID in this context refers to destination of packet (which is different from destID in context of a route!)
+    packet.header.destID = neighborID; // DV packets are just sent to neighbors
 
     uint32_t offset = 0;
 
+    // Serialize relevant information from forwarding table into packet's payload
     for (const auto& nbr : forwardingTable.table) { // added const and & because we won't be modifying in the for loop, so more efficient (won't make a copy)
             router_id routeDestID = nbr.first;
             router_id nextHop = nbr.second.nextHop;
@@ -52,9 +56,9 @@ void DistanceVector::sendUpdates()
         PortStatusEntry portStatusEntry = port.second;
         if (portStatusEntry.isUp)
         {
-            Packet newDVPacket = createDVPacket(portStatusEntry.destRouterID); 
-            void* serializedDVPacket = serializePacket(newDVPacket);
-            sys->send(port.first, serializedDVPacket, newDVPacket.header.size);
+            Packet dvPacket = createDVPacket(portStatusEntry.destRouterID); // set destination as neighborID
+            void* serializedDVPacket = serializePacket(dvPacket);
+            sys->send(port.first, serializedDVPacket, dvPacket.header.size);
         }
     }
 }
@@ -82,6 +86,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         auto nbrToDestRoute = row.second;
         if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
+            // TODO: add another check to see if the destID is associated with any neighbor in adjacencyList. If so, verify the port is alive.
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost);
             updateRequired = true;
         }
@@ -93,29 +98,33 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 };
 
 // function that handles changes in neighbor to neighbor cost, determined from
-// ping pong process. this is just another part of the DV algorithm
+// ping pong process. this is just another part of the DV algorithm.
+// Parameters: 
+//  - port is the number that the PONG came from
+//  - changeCost is the difference in timeCost between previous and current RTT.
+//      If the port was previously offline, this will simply be the new RTT
+//  Note: no need to update timestamp in adjacencyList or portStatus since 
+//  those have been updated in RoutingProtocolImpl.cc before delegating to this
 void DistanceVector::handleCostChange(port_num port, cost changeCost)
 {
-
-    // get the neighbor ID from the port
+    // Get the neighbor ID from the port
     router_id neighborID = (*portStatus)[port].destRouterID;
-    bool updateRequired = false;
-    (*adjacencyList)[neighborID].timeCost += changeCost; // Note to Daniel: always need to update adjacencyList, since that covers costs for each neighbor
 
-    // update the routing table with the new cost
+    // Update any routing table entries that use this link (uses neighborID as nextHop) with the new cost
     for (auto row : forwardingTable.table)
     {
         auto dest = row.first;
         auto route = row.second;
         if (route.nextHop == neighborID)
         {
-            // Note to Daniel: no need for the special case where nextHop==dest because changeCost is already the difference between old value and new value
-            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost); // TODO: pass in timestamp for freshness check
-            updateRequired = true; // since the forwardingTable only contains the least cost paths to destinations, if a route in the table must be updated, then a new min was found => must send updates            
+            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost); 
         }
     }
-    if (updateRequired)
-        sendUpdates();
+
+    // Handle case where forwardingTable has never seen this destination before
+    if (forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
+        forwardingTable.updateRoute(neighborID, neighborID, changeCost); 
+    }
 }
 
 bool DistanceVector::dvEntryExpiredCheck() {
