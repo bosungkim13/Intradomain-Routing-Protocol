@@ -70,7 +70,11 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
     int neighborID = dvPacket.header.sourceID;
-    DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys); 
+    DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
+
+    // print received forwarding table
+    cout << "DV Payload received. Table contents:" << endl;
+    dvPayload.printTable();
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
@@ -88,15 +92,20 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     }
 
     // if the table was updated, send out a new DV packet to all neighbors
-    if (updateRequired)
+    if (updateRequired) {
+        cout << "Update required, new table is: " << endl;
+        forwardingTable.printTable();
         sendUpdates();
+    }
 };
 
 // function that handles changes in neighbor to neighbor cost, determined from
 // ping pong process. this is just another part of the DV algorithm
 void DistanceVector::handleCostChange(port_num port, cost changeCost)
 {
-
+    cout << "Cost change detected! Old cost: " << (*portStatus)[port].timeCost << ", New cost: " << (*portStatus)[port].timeCost + changeCost << endl;
+    cout << "Old table: " << endl;
+    forwardingTable.printTable();
     // get the neighbor ID from the port
     router_id neighborID = (*portStatus)[port].destRouterID;
     bool updateRequired = false;
@@ -116,6 +125,9 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
     }
     if (updateRequired)
         sendUpdates();
+    
+    cout << "New table: " << endl;
+    forwardingTable.printTable();
 }
 
 bool DistanceVector::dvEntryExpiredCheck() {
@@ -131,6 +143,11 @@ bool DistanceVector::dvEntryExpiredCheck() {
     }
     for (router_id destID : removeSet) {
         forwardingTable.removeRoute(destID);
+    }
+
+    // print destination that expired
+    for (router_id destID : removeSet) {
+        cout << "Destination " << destID << " has expired and will be removed." << endl;
     }
 
     return removeSet.size() > 0;

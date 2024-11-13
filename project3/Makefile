@@ -2,6 +2,8 @@ CC = g++
 COPTS = -g -Wall -std=c++11
 LKOPTS =
 
+CXXFLAGS += -std=c++11
+
 OBJS =\
 	Event.o\
 	Link.o\
