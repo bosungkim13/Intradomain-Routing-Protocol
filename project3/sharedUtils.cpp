@@ -30,7 +30,7 @@ void* serializePacket(Packet serializeMe) {
         memcpy((char*)buffer + offset, &seqNum, sizeof(seq_num));
         // For the rest of the payload, it alternates between neighbor ID and cost
         offset += sizeof(seq_num);
-        while (offset < header.size) {
+        while (offset < mySize) {
             unsigned short neighborID = serializeMe.payload[offset - HEADER_SIZE];
             neighborID = htons(neighborID);
             memcpy((char*)buffer + offset, &neighborID, sizeof(router_id));
@@ -67,6 +67,8 @@ void* serializePacket(Packet serializeMe) {
         time_stamp timestamp = serializeMe.payload[offset - HEADER_SIZE];
         timestamp = htonl(timestamp);
         memcpy((char*)buffer + offset, &timestamp, sizeof(timestamp));
+    } else if (header.packetType == DATA) {
+        memcpy((char*)buffer + offset, &serializeMe.payload[offset - HEADER_SIZE], mySize - HEADER_SIZE);
     } else {
         std::cout << "serializePacket(): Unknown packet type. Not processing payload." << std::endl;
     }
@@ -88,7 +90,7 @@ Packet deserializePacket(void* deserializeMe) {
     // Copy the payload back. Could be less than the maximum payload size.
     memcpy(packet.payload, (char*)deserializeMe + sizeof(PacketHeader), packet.header.size - sizeof(PacketHeader));
     
-    free(deserializeMe); // Note to Bosung: I (michael) added this line, make sure it doesn't break anything in your implementation of LS
+    // free(deserializeMe); // Note to Bosung: I (michael) added this line, make sure it doesn't break anything in your implementation of LS
 
     return packet; // Return the deserialized packet
 }

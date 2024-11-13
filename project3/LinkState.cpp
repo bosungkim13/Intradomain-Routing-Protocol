@@ -21,7 +21,7 @@ Packet LinkState::CreatePacket(unsigned short size) {
     for (auto nbr: (*this->adjacencyList)) {
         auto neighborID = nbr.first;
         auto nbrCost = nbr.second.timeCost;
-
+        assert(nbrCost != INFINITY_COST);
         // Add neighbor ID and cost to the payload
         memcpy(packet.payload + offset, &neighborID, sizeof(neighborID));
         offset += sizeof(neighborID);
@@ -37,7 +37,7 @@ void LinkState::SendUpdates() {
     // Each neighbor will have its port number and cost (2 + 2 = 4 bytes)
     // Header size is 12 bytes and seqNum is 4 bytes which is start of payload
     unsigned int size = this->adjacencyList->size() * 4 + HEADER_SIZE + sizeof(seqNum);
-    assert(12 == HEADER_SIZE);
+    assert(8 == HEADER_SIZE);
 
     for (port_num portId = 0; portId < this->numPorts; portId++) {
         auto pit = this->portStatus->find(portId);
@@ -49,7 +49,7 @@ void LinkState::SendUpdates() {
 
         Packet packet = this->CreatePacket(size);
         void* msg = serializePacket(packet);
-        sys->send(portId, msg, size);
+        this->sys->send(portId, msg, size);
     }
 }
 
