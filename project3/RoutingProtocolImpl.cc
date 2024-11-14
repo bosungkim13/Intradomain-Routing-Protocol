@@ -104,22 +104,27 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
     case PING:
       // Handle PING packet
       this->handlePings(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     case PONG:
       // Handle PONG packet
       this->handlePongs(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     case DATA:
       // Handle DATA packet
       this->handleData(port, packet);
+      // Can't free the received packet's memory because it gets reused when forwarding the packet
       break;
     case LS:
       // Handle LS packet
       this->myLSRP.HandlePacket(port, packet, size);
+      // Question for Bosung: should we free the received packet's memory here?
       break;
     case DV:
       // Handle DV packet
       this->myDV.handleDVPacket(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     default:
       // Handle unknown packet type
@@ -284,12 +289,14 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
       sys->send(this->adjacencyList[destId].port, handleMe, dataPacket.header.size);
     }
   } else if (this->protocolType == P_DV) { 
-    
-    if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {
+
+    if (this->myDV.forwardingTable.table.count(destId) == 0) {
+      router_id nextHopRouterID = this->myDV.forwardingTable.table[destId].nextHop;
+      port_num nextHopPort = adjacencyList[nextHopRouterID].port;
       cout << "About to send packet to next hop" << endl;
-      cout << "Sending it from router ID" << this->routerID << " to next hop " << this->myDV.forwardingTable.table[destId].nextHop << endl;
-      // If the destination is in the forwarding table, send the packet to the next hop
-      sys->send(this->myDV.forwardingTable.table[destId].nextHop, handleMe, dataPacket.header.size);
+      cout << "Sending it from router ID " << this->routerID << " to nextHopRouterID " << this->myDV.forwardingTable.table[destId].nextHop << " and nextHopPort " << nextHopPort << endl;
+      // If the destination is in the forwarding table, send the packet to the next hop's port (not the router id!)
+      sys->send(nextHopPort, handleMe, dataPacket.header.size);
   }
   
   // If it makes it here, the destination is not in forwarding table and the packet is lost
