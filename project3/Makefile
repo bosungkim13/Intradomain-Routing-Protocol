@@ -1,5 +1,5 @@
 CC = g++
-COPTS = -g -Wall -std=c++11
+COPTS = -g -O0 -Wall -std=c++11
 LKOPTS =
 
 CXXFLAGS += -std=c++11

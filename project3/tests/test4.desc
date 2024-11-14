@@ -1,0 +1,8 @@
+Network Partition and Healing. A ring network connecting nodes 1-5 in a loop.
+
+Tests whether:
+1) Handle link failure
+2) Recover from link failure
+3) Handle link delay changes
+
+Should drop data packet on link failure and recover from link failure.

@@ -1,0 +1,6 @@
+Basic Link Failure and Recovery
+
+Tests whether:
+1) handles link failures
+2) recoveries
+3) delay changes

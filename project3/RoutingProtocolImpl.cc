@@ -110,6 +110,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
     case DATA:
       // Handle DATA packet
       this->handleData(port, packet);
+      break;
     case LS:
       // Handle LS packet
       this->myLSRP.HandlePacket(port, packet, size);
@@ -117,6 +118,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
     case DV:
       // Handle DV packet
       this->myDV.handleDVPacket(port, deserializedPacket);
+      break;
     default:
       // Handle unknown packet type
       break;
@@ -132,19 +134,21 @@ void RoutingProtocolImpl::sendPings() {
 
   for (unsigned int i = 0; i < this->numPorts; i++) {
     Packet packet;
-    time_stamp timestamp = htonl(sys->time()); // Set timestamp
+    time_stamp timestamp = sys->time(); // Set timestamp
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
 
     PacketHeader *packetHeader = &packet.header;
     packetHeader->packetType = PING; // Set packet type
-    packetHeader->size = htons(size); // Set packet size
-    packetHeader->sourceID = htons(routerID); // Set source ID
+    packetHeader->size = size; // Set packet size
+    packetHeader->sourceID = this->routerID; // Set source ID
 
     // Destination packet is unused in the ping packet, so michael commented this out:
     // // defaults to 0 if not set
     // packetHeader->destID = htons(portStatus[i].destRouterID); // Set destination ID
 
     // Serialize
+    assert(packet.header.packetType == PING);
+    assert(packet.header.size == HEADER_SIZE + sizeof(time_stamp));
     void *serializedPacket = serializePacket(packet);
 
     // Send the packet
@@ -161,10 +165,12 @@ original timestamp still in the payload) immediately back to the neighbor.
 'port' is the port from which this packet was received.
 */
 void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
+  assert(pingPacket.header.packetType == PING);
   pingPacket.header.packetType = PONG;
   pingPacket.header.destID = pingPacket.header.sourceID;
   pingPacket.header.sourceID = this->routerID;
 
+  assert(pingPacket.header.packetType == PONG);
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, pingPacket.header.size);
 }
@@ -181,7 +187,7 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   time_stamp currTimestamp = sys->time();
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
-  std::cout << "handlePongs(): RTT = " << rtt << std::endl;
+  // std::cout << "handlePongs(): RTT = " << rtt << std::endl;
 
   // Use the PONG packet's source ID to discover the ID of its current neighbor
   router_id destID = pongPacket.header.sourceID;
@@ -198,18 +204,18 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   portStatus[port].lastUpdate = currTimestamp;
   portStatus[port].timeCost = rtt;
 
-  // If we didn't previously have destID as a neighbor, create destID -> neighbor (port, timecost) mapping 
-  if (adjacencyList.find(destID) == adjacencyList.end()) {
-    adjacencyList[destID] = Neighbor(port, 0);
-  }
-
-  adjacencyList[pongPacket.header.sourceID].port = port;
-  cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;  // Note: if the destID has just been added to adjList, timeCost will be 0
-  adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
-  std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
-  std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
-
   if (protocolType == P_DV) {
+
+    // If we didn't previously have destID as a neighbor, create destID -> neighbor (port, timecost) mapping 
+    if (adjacencyList.find(destID) == adjacencyList.end()) {
+      adjacencyList[destID] = Neighbor(port, 0);
+    }
+
+    adjacencyList[pongPacket.header.sourceID].port = port;
+    cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;  // Note: if the destID has just been added to adjList, timeCost will be 0
+    adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
+    // std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
+    // std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
     // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
     cost changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
@@ -217,20 +223,23 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     this->myDV.sendUpdates();
   } else if (protocolType == P_LS) {
     // preserving the behavior 
-    if (wasUp) {
+    bool topologyChanged = false;
+    bool rttChanged = false;
+    if (this->adjacencyList.count(destID) && wasUp) {
       // If this port was previously up, only send updates if time cost changed
-      if (adjacencyList[pongPacket.header.sourceID].timeCost != oldTimeCost) {
-        // Time cost has changed
-        // for link state routing protocol, we need to update since cost changes
-        this->myLSRP.UpdateTable();
-        // send updates to all neighbors
-        this->myLSRP.SendUpdates();
-      }
+      this->adjacencyList[destID].port = port;
+      cost oldTimeCost = this->adjacencyList[destID].timeCost;
+      this->adjacencyList[destID].timeCost = rtt;
+
+      // TODO: change this to a range so we dont update for every single minimal change
+      rttChanged = oldTimeCost != this->adjacencyList[destID].timeCost;
     } else {
       // Update the forwarding table? Should always be the same as
-      assert(forwardingTable[port] == pongPacket.header.sourceID);
-      forwardingTable[port] = pongPacket.header.sourceID;
-
+      this->adjacencyList[destID] = Neighbor(port, rtt);
+      forwardingTable[destID] = pongPacket.header.sourceID;
+      topologyChanged = true;
+    }
+    if (topologyChanged || rttChanged) {
       // If port was not previously up, send updates no matter what
       // for link state routing protocol, we need to update since cost changes
       this->myLSRP.UpdateTable();
@@ -244,7 +253,17 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   // TODO: Implement this method to handle DATA packets
   //       (this method will be called every time a DATA packet is received)
   Packet dataPacket = deserializePacket(handleMe);
+  dataPacket.header.packetType = DATA;
   router_id destId = dataPacket.header.destID;
+
+  // TODO: Implement handling for when data packet origniates from this router
+  if (dataPacket.header.sourceID == SPECIAL_PORT) {
+    dataPacket.header.sourceID = this->routerID;
+    std::cout << "handleData(): Data packet originates from router "  << dataPacket.header.sourceID << " going to router " << dataPacket.header.destID << std::endl;
+    handleMe = serializePacket(dataPacket);
+  }
+
+
   if (dataPacket.header.packetType != DATA) {
     std::cout << "handleData(): Packet type is not DATA." << std::endl;
   }
@@ -258,7 +277,7 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   if (this->protocolType == P_LS) {
     if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
       // If the destination is in the forwarding table, send the packet to the next hop
-      sys->send(this->forwardingTable[destId], handleMe, dataPacket.header.size);
+      sys->send(this->adjacencyList[destId].port, handleMe, dataPacket.header.size);
     }
   } else if (this->protocolType == P_DV) { 
     if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {

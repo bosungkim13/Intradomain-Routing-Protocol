@@ -41,6 +41,7 @@ typedef std::unordered_map<port_num, PortStatusEntry>* portStatus_ptr;
 typedef std::unordered_map<router_id, router_id>* forwardingTable_ptr;
 
 // Define PacketHeader struct
+#pragma pack(push, 1)
 struct PacketHeader {
     unsigned char packetType; // 8-bit packet type
     unsigned char reserved; // 8-bit reserved section
@@ -58,6 +59,7 @@ struct Packet {
     char payload[MAX_PAYLOAD_SIZE];
     Packet() {} // Default constructor
 };
+#pragma pack(pop)
 
 enum eAlarmType {
     PingPongAlarm,
