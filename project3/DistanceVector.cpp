@@ -77,7 +77,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
 
     // print received forwarding table
-    cout << "DV Payload received. Table contents:" << endl;
+    cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
     dvPayload.printTable();
 
     // bellman-ford algorithm
@@ -88,9 +88,22 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     {
         auto dest = row.first;
         auto nbrToDestRoute = row.second;
+        // ignore routes from neighbors whose destination is themselves
+        if (dest == this->myRouterID)
+        {
+            continue;
+        }
         if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
             // TODO: add another check to see if the destID is associated with any neighbor in adjacencyList. If so, verify the port is alive.
+            // If the port is dead, don't update the route.
+
+            if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
+            {
+                cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
+                continue;
+            }
+            
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost);
             updateRequired = true;
         }
