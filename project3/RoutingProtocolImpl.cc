@@ -187,7 +187,7 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   time_stamp currTimestamp = sys->time();
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
-  std::cout << "handlePongs(): RTT = " << rtt << std::endl;
+  // std::cout << "handlePongs(): RTT = " << rtt << std::endl;
 
   // Use the PONG packet's source ID to discover the ID of its current neighbor
   router_id destID = pongPacket.header.sourceID;
@@ -214,8 +214,8 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     adjacencyList[pongPacket.header.sourceID].port = port;
     cost oldTimeCost = adjacencyList[pongPacket.header.sourceID].timeCost;  // Note: if the destID has just been added to adjList, timeCost will be 0
     adjacencyList[pongPacket.header.sourceID].timeCost = rtt;
-    std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
-    std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
+    // std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
+    // std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
     // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
     cost changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
