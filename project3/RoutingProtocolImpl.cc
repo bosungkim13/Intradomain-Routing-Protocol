@@ -98,6 +98,8 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
 void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short size) {
   // add your own code
   Packet deserializedPacket = deserializePacket(packet);
+  cout << "Currently on router ID " << this->routerID << endl;
+  cout << "Received packet of type " << deserializedPacket.header.packetType << " on port " << port << endl;
   switch (deserializedPacket.header.packetType) {
     case PING:
       // Handle PING packet
@@ -252,7 +254,9 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
 void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   // TODO: Implement this method to handle DATA packets
   //       (this method will be called every time a DATA packet is received)
+  cout << "starting to deserialize packet" << endl;
   Packet dataPacket = deserializePacket(handleMe);
+  cout << "finished deserializing packet" << endl;
   dataPacket.header.packetType = DATA;
   router_id destId = dataPacket.header.destID;
 
@@ -280,7 +284,10 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
       sys->send(this->adjacencyList[destId].port, handleMe, dataPacket.header.size);
     }
   } else if (this->protocolType == P_DV) { 
+    
     if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {
+      cout << "About to send packet to next hop" << endl;
+      cout << "Sending it from router ID" << this->routerID << " to next hop " << this->myDV.forwardingTable.table[destId].nextHop << endl;
       // If the destination is in the forwarding table, send the packet to the next hop
       sys->send(this->myDV.forwardingTable.table[destId].nextHop, handleMe, dataPacket.header.size);
   }
