@@ -30,7 +30,7 @@ Packet DistanceVector::createDVPacket(unsigned short neighborID)
             router_id nextHop = nbr.second.nextHop;
             cost routeCost = nbr.second.routeCost;
 
-            if (nextHop == neighborID) { // Poison Reverse: If a node (C) goes through its neighbor (B) to get to a route destination (A), then have C tell B its distance to A is infinite
+            if (nextHop == neighborID && routeDestID != nextHop) { // Poison Reverse: If a node (C) goes through its neighbor (B) to get to a route destination (A), then have C tell B its distance to A is infinite
                 routeCost = USHRT_MAX;
             }
 
