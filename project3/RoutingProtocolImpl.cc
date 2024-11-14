@@ -99,7 +99,6 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
   // add your own code
   Packet deserializedPacket = deserializePacket(packet);
   cout << "Currently on router ID " << this->routerID << endl;
-  cout << "Received packet of type " << deserializedPacket.header.packetType << " on port " << port << endl;
   switch (deserializedPacket.header.packetType) {
     case PING:
       // Handle PING packet
@@ -143,7 +142,8 @@ void RoutingProtocolImpl::sendPings() {
     Packet packet;
     time_stamp timestamp = sys->time(); // Set timestamp
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
-
+    // verify that timestamp was copied to packet.payload
+    cout << "Timestamp sanity check: " << ntohl(*(time_stamp*)packet.payload) << endl;
     PacketHeader *packetHeader = &packet.header;
     packetHeader->packetType = PING; // Set packet type
     packetHeader->size = size; // Set packet size
@@ -178,6 +178,7 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.sourceID = this->routerID;
 
   assert(pingPacket.header.packetType == PONG);
+  cout << "Ping packet timestamp: " << ntohl(*(time_stamp*)pingPacket.payload) << endl;
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, pingPacket.header.size);
 }
@@ -192,6 +193,8 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   // Calculate RTT
   time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload);
   time_stamp currTimestamp = sys->time();
+  cout << "prevTimestamp: " << prevTimestamp << endl;
+  cout << "currTimestamp: " << currTimestamp << endl;
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
   // std::cout << "handlePongs(): RTT = " << rtt << std::endl;

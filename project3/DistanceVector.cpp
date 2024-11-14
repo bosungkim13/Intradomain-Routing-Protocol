@@ -6,6 +6,8 @@ DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nu
 DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
 // DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
+const bool verbose = false;
+
 // Populate a distance vector packet and set the packet's destination as
 // neighborID (since DV packets are only sent to immediate neighbors)
 // NOTE: values are still in host order (serializePacket will convert endianness to network order)
@@ -77,8 +79,10 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
 
     // print received forwarding table
-    cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
-    dvPayload.printTable();
+    if (verbose) {
+        cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
+        dvPayload.printTable();
+    }
 
     // bellman-ford algorithm
     // iterate thru the table from received packet and update adj list ref
@@ -100,7 +104,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 
             if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
             {
-                cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
+                if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
                 continue;
             }
             
@@ -111,8 +115,10 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 
     // if the table was updated, send out a new DV packet to all neighbors
     if (updateRequired) {
-        cout << "Update required, new table is: " << endl;
-        forwardingTable.printTable();
+        if (verbose) {
+            cout << "Update required, new table is: " << endl;
+            forwardingTable.printTable();
+        }
         sendUpdates();
     }
 };
@@ -127,9 +133,12 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 //  those have been updated in RoutingProtocolImpl.cc before delegating to this
 void DistanceVector::handleCostChange(port_num port, cost changeCost)
 {
-    cout << "Cost change detected! Old cost: " << (*portStatus)[port].timeCost - changeCost << ", New cost: " << (*portStatus)[port].timeCost << endl;
-    cout << "Old table for Router ID: " << this->myRouterID << endl;
-    forwardingTable.printTable();
+    if (verbose) {
+        cout << "Cost change detected for neighbor " << (*portStatus)[port].destRouterID << " on port " << port << endl;
+        cout << "Old cost: " << (*portStatus)[port].timeCost - changeCost << ", New cost: " << (*portStatus)[port].timeCost << endl;
+        cout << "Old table for Router ID: " << this->myRouterID << endl;
+        forwardingTable.printTable();
+    }
     router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
     // Update any routing table entries that use this link (uses neighborID as nextHop) with the new cost
@@ -148,8 +157,10 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
         forwardingTable.updateRoute(neighborID, neighborID, changeCost); 
     }
 
-    cout << "New table for Router ID: " << this->myRouterID << endl;
-    forwardingTable.printTable();
+    if (verbose) {
+        cout << "New table for Router ID: " << this->myRouterID << endl;
+        forwardingTable.printTable();
+    }
 }
 
 bool DistanceVector::dvEntryExpiredCheck() {
