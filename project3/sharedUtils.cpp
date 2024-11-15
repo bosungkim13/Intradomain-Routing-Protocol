@@ -64,7 +64,7 @@ void* serializePacket(Packet serializeMe) {
         }
     } else if (header.packetType == PONG || header.packetType == PING) {
         // For PING and PONG packets, the payload is the timestamp
-        time_stamp timestamp = serializeMe.payload[offset - HEADER_SIZE];
+        time_stamp timestamp = *(time_stamp*)serializeMe.payload;
         cout << "serializePacket(): timestamp = " << timestamp << endl;
         timestamp = htonl(timestamp);
         memcpy((char*)buffer + offset, &timestamp, sizeof(timestamp));

@@ -159,6 +159,9 @@ void RoutingProtocolImpl::sendPings() {
     assert(packet.header.size == HEADER_SIZE + sizeof(time_stamp));
     void *serializedPacket = serializePacket(packet);
 
+    // sanity check to deserialize the packet
+    // Packet deserializedPacket = deserializePacket(serializedPacket);
+    // cout << "Deserialized packet timestamp right before sending: " << ntohl(*(time_stamp*)deserializedPacket.payload) << endl;
     // Send the packet
     sys->send(i, serializedPacket, size);
   }
@@ -192,7 +195,7 @@ to the current time to compute the RTT.
 */
 void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   // Calculate RTT
-  time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload);
+  time_stamp prevTimestamp = (*(time_stamp*)pongPacket.payload); // TODO: how did removing ntohl fix it????
   time_stamp currTimestamp = sys->time();
   cout << "prevTimestamp: " << prevTimestamp << endl;
   cout << "currTimestamp: " << currTimestamp << endl;
