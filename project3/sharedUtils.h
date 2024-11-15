@@ -11,7 +11,7 @@
 typedef unsigned short port_num;
 typedef unsigned short router_id;
 typedef unsigned short cost;
-typedef unsigned short time_stamp;
+typedef unsigned long time_stamp;
 typedef unsigned int seq_num;
 
 // Define Neighbor struct

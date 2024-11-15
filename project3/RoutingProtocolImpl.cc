@@ -143,7 +143,8 @@ void RoutingProtocolImpl::sendPings() {
     time_stamp timestamp = sys->time(); // Set timestamp
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
     // verify that timestamp was copied to packet.payload
-    cout << "Timestamp sanity check: " << ntohl(*(time_stamp*)packet.payload) << endl;
+    cout << "Timestamp sanity check inside of sendPings(): " << *(time_stamp*)packet.payload << endl;
+    cout << "sys->time(): " << sys->time() << endl;
     PacketHeader *packetHeader = &packet.header;
     packetHeader->packetType = PING; // Set packet type
     packetHeader->size = size; // Set packet size
@@ -178,7 +179,6 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.sourceID = this->routerID;
   assert(pingPacket.header.packetType == PONG);
   // print entire payload
-  cout << "Ping packet payload: " << pingPacket.payload << endl;
   // cout << "Ping packet timestamp: " << ntohl(*(time_stamp*)pingPacket.payload) << endl;
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, pingPacket.header.size);
