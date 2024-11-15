@@ -31,7 +31,7 @@ struct DVForwardingTable
     DVForwardingTable(Node * n); // need to pass in Node pointer as context for getting the time.
 
     // Add or update a route for a destination
-    void updateRoute(router_id destination, router_id nextHop, cost routeCost);
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verbose = false);
 
     // Get the route for a given destination, if it exists
     DVRoute getRoute(router_id destination) const;

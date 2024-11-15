@@ -176,9 +176,10 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.packetType = PONG;
   pingPacket.header.destID = pingPacket.header.sourceID;
   pingPacket.header.sourceID = this->routerID;
-
   assert(pingPacket.header.packetType == PONG);
-  cout << "Ping packet timestamp: " << ntohl(*(time_stamp*)pingPacket.payload) << endl;
+  // print entire payload
+  cout << "Ping packet payload: " << pingPacket.payload << endl;
+  // cout << "Ping packet timestamp: " << ntohl(*(time_stamp*)pingPacket.payload) << endl;
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, pingPacket.header.size);
 }
@@ -262,9 +263,7 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
 void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   // TODO: Implement this method to handle DATA packets
   //       (this method will be called every time a DATA packet is received)
-  cout << "starting to deserialize packet" << endl;
   Packet dataPacket = deserializePacket(handleMe);
-  cout << "finished deserializing packet" << endl;
   dataPacket.header.packetType = DATA;
   router_id destId = dataPacket.header.destID;
 

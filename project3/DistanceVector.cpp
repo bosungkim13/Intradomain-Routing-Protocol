@@ -6,7 +6,7 @@ DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nu
 DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
 // DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
-const bool verbose = false;
+const bool verbose = true;
 
 // Populate a distance vector packet and set the packet's destination as
 // neighborID (since DV packets are only sent to immediate neighbors)
@@ -107,8 +107,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
                 if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
                 continue;
             }
-            
-            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost);
+            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
             updateRequired = true;
         }
     }
@@ -148,13 +147,13 @@ void DistanceVector::handleCostChange(port_num port, cost changeCost)
         auto route = row.second;
         if (route.nextHop == neighborID)
         {
-            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost); 
+            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost, verbose); 
         }
     }
 
     // Handle case where forwardingTable has never seen this destination before
     if (forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
-        forwardingTable.updateRoute(neighborID, neighborID, changeCost); 
+        forwardingTable.updateRoute(neighborID, neighborID, changeCost, verbose); 
     }
 
     if (verbose) {
