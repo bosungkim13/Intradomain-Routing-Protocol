@@ -14,6 +14,8 @@ typedef unsigned short cost;
 typedef unsigned long time_stamp;
 typedef unsigned int seq_num;
 
+const bool verbose = false;
+
 // Define Neighbor struct
 struct Neighbor {
     port_num port;
