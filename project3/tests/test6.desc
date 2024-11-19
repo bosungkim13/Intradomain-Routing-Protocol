@@ -1,0 +1,12 @@
+Creates a triangle network with a link delay change.
+
+Tests whether:
+1) Handle assymetric link delay changes
+
+The protocol should correctly handle asymmetric delays, updating routes based on the total path cost.
+
+At time 5.00, node 1 sends data to node 3; should choose path through node 2.
+At time 25.00, delay from node 1 to node 2 increases to 0.100.
+At time 30.00, node 1 sends data to node 3; may choose direct link due to increased delay to node 2.
+At time 50.00, delay from node 2 to node 1 decreases to 0.010.
+At time 55.00, node 1 sends data to node 3; should reconsider routes based on updated delays.

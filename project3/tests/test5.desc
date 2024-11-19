@@ -1,0 +1,18 @@
+Large network with multuiple failures. An 8-node ring with additional chords connecting nodes for shortcut paths
+
+Tests whether: 
+1) handles link failures
+2) recoveries
+3) delay changes
+
+The protocol should recompute routes as the network topology changes, maintaining connectivity despite failures.
+
+At time 10.00, node 1 sends data to node 7.
+At time 100.00, link (2,3) fails.
+At time 110.00, node 1 sends data to node 7; should reroute accordingly.
+At time 200.00, link (5,6) fails, creating potential routing challenges.
+At time 210.00, node 1 sends data to node 7; must find an alternative path.
+At time 300.00, link (2,3) comes back up.
+At time 310.00, node 1 sends data to node 7; should adjust routes.
+At time 400.00, link (5,6) comes back up.
+At time 410.00, node 1 sends data to node 7; network is fully operational.
