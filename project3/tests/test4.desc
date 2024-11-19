@@ -6,3 +6,13 @@ Tests whether:
 3) Handle link delay changes
 
 Should drop data packet on link failure and recover from link failure.
+
+At time 5.00, node 1 sends data to node 4.
+At time 20.00, link (2,3) fails, breaking one path.
+At time 30.00, node 1 sends data to node 4; should use the alternative path.
+At time 40.00, link (5,1) fails, partitioning the network.
+At time 50.00, node 1 sends data to node 4; should fail due to partition.
+At time 60.00, link (2,3) comes back up, healing the network.
+At time 70.00, node 1 sends data to node 4; should succeed.
+At time 80.00, link (5,1) comes back up, restoring the full ring.
+At time 90.00, node 1 sends data to node 4; should use the shortest path.

@@ -1,0 +1,376 @@
+[nodes]
+1 2 3 4 5 6 7 8 9 10
+11 12 13 14 15 16 17 18 19 20
+21 22 23 24 25 26 27 28 29 30
+31 32 33 34 35 36 37 38 39 40
+41 42 43 44 45 46 47 48 49 50
+51 52 53 54 55 56 57 58 59 60
+61 62 63 64 65 66 67 68 69 70
+71 72 73 74 75 76 77 78 79 80
+81 82 83 84 85 86 87 88 89 90
+91 92 93 94 95 96 97 98 99 100
+
+[links]
+# Horizontal links (connecting nodes in the same row)
+# Row 1
+(1,2) delay 0.010 prob 0.0
+(2,3) delay 0.010 prob 0.0
+(3,4) delay 0.010 prob 0.0
+(4,5) delay 0.010 prob 0.0
+(5,6) delay 0.010 prob 0.0
+(6,7) delay 0.010 prob 0.0
+(7,8) delay 0.010 prob 0.0
+(8,9) delay 0.010 prob 0.0
+(9,10) delay 0.010 prob 0.0
+
+# Row 2
+(11,12) delay 0.010 prob 0.0
+(12,13) delay 0.010 prob 0.0
+(13,14) delay 0.010 prob 0.0
+(14,15) delay 0.010 prob 0.0
+(15,16) delay 0.010 prob 0.0
+(16,17) delay 0.010 prob 0.0
+(17,18) delay 0.010 prob 0.0
+(18,19) delay 0.010 prob 0.0
+(19,20) delay 0.010 prob 0.0
+
+# Row 3
+(21,22) delay 0.010 prob 0.0
+(22,23) delay 0.010 prob 0.0
+(23,24) delay 0.010 prob 0.0
+(24,25) delay 0.010 prob 0.0
+(25,26) delay 0.010 prob 0.0
+(26,27) delay 0.010 prob 0.0
+(27,28) delay 0.010 prob 0.0
+(28,29) delay 0.010 prob 0.0
+(29,30) delay 0.010 prob 0.0
+
+# Row 4
+(31,32) delay 0.010 prob 0.0
+(32,33) delay 0.010 prob 0.0
+(33,34) delay 0.010 prob 0.0
+(34,35) delay 0.010 prob 0.0
+(35,36) delay 0.010 prob 0.0
+(36,37) delay 0.010 prob 0.0
+(37,38) delay 0.010 prob 0.0
+(38,39) delay 0.010 prob 0.0
+(39,40) delay 0.010 prob 0.0
+
+# Row 5
+(41,42) delay 0.010 prob 0.0
+(42,43) delay 0.010 prob 0.0
+(43,44) delay 0.010 prob 0.0
+(44,45) delay 0.010 prob 0.0
+(45,46) delay 0.010 prob 0.0
+(46,47) delay 0.010 prob 0.0
+(47,48) delay 0.010 prob 0.0
+(48,49) delay 0.010 prob 0.0
+(49,50) delay 0.010 prob 0.0
+
+# Row 6
+(51,52) delay 0.010 prob 0.0
+(52,53) delay 0.010 prob 0.0
+(53,54) delay 0.010 prob 0.0
+(54,55) delay 0.010 prob 0.0
+(55,56) delay 0.010 prob 0.0
+(56,57) delay 0.010 prob 0.0
+(57,58) delay 0.010 prob 0.0
+(58,59) delay 0.010 prob 0.0
+(59,60) delay 0.010 prob 0.0
+
+# Row 7
+(61,62) delay 0.010 prob 0.0
+(62,63) delay 0.010 prob 0.0
+(63,64) delay 0.010 prob 0.0
+(64,65) delay 0.010 prob 0.0
+(65,66) delay 0.010 prob 0.0
+(66,67) delay 0.010 prob 0.0
+(67,68) delay 0.010 prob 0.0
+(68,69) delay 0.010 prob 0.0
+(69,70) delay 0.010 prob 0.0
+
+# Row 8
+(71,72) delay 0.010 prob 0.0
+(72,73) delay 0.010 prob 0.0
+(73,74) delay 0.010 prob 0.0
+(74,75) delay 0.010 prob 0.0
+(75,76) delay 0.010 prob 0.0
+(76,77) delay 0.010 prob 0.0
+(77,78) delay 0.010 prob 0.0
+(78,79) delay 0.010 prob 0.0
+(79,80) delay 0.010 prob 0.0
+
+# Row 9
+(81,82) delay 0.010 prob 0.0
+(82,83) delay 0.010 prob 0.0
+(83,84) delay 0.010 prob 0.0
+(84,85) delay 0.010 prob 0.0
+(85,86) delay 0.010 prob 0.0
+(86,87) delay 0.010 prob 0.0
+(87,88) delay 0.010 prob 0.0
+(88,89) delay 0.010 prob 0.0
+(89,90) delay 0.010 prob 0.0
+
+# Row 10
+(91,92) delay 0.010 prob 0.0
+(92,93) delay 0.010 prob 0.0
+(93,94) delay 0.010 prob 0.0
+(94,95) delay 0.010 prob 0.0
+(95,96) delay 0.010 prob 0.0
+(96,97) delay 0.010 prob 0.0
+(97,98) delay 0.010 prob 0.0
+(98,99) delay 0.010 prob 0.0
+(99,100) delay 0.010 prob 0.0
+
+# Vertical links (connecting nodes in the same column)
+# Columns 1 to 10
+# Column 1
+(1,11) delay 0.010 prob 0.0
+(11,21) delay 0.010 prob 0.0
+(21,31) delay 0.010 prob 0.0
+(31,41) delay 0.010 prob 0.0
+(41,51) delay 0.010 prob 0.0
+(51,61) delay 0.010 prob 0.0
+(61,71) delay 0.010 prob 0.0
+(71,81) delay 0.010 prob 0.0
+(81,91) delay 0.010 prob 0.0
+
+# Column 2
+(2,12) delay 0.010 prob 0.0
+(12,22) delay 0.010 prob 0.0
+(22,32) delay 0.010 prob 0.0
+(32,42) delay 0.010 prob 0.0
+(42,52) delay 0.010 prob 0.0
+(52,62) delay 0.010 prob 0.0
+(62,72) delay 0.010 prob 0.0
+(72,82) delay 0.010 prob 0.0
+(82,92) delay 0.010 prob 0.0
+
+# Column 3
+(3,13) delay 0.010 prob 0.0
+(13,23) delay 0.010 prob 0.0
+(23,33) delay 0.010 prob 0.0
+(33,43) delay 0.010 prob 0.0
+(43,53) delay 0.010 prob 0.0
+(53,63) delay 0.010 prob 0.0
+(63,73) delay 0.010 prob 0.0
+(73,83) delay 0.010 prob 0.0
+(83,93) delay 0.010 prob 0.0
+
+# Column 4
+(4,14) delay 0.010 prob 0.0
+(14,24) delay 0.010 prob 0.0
+(24,34) delay 0.010 prob 0.0
+(34,44) delay 0.010 prob 0.0
+(44,54) delay 0.010 prob 0.0
+(54,64) delay 0.010 prob 0.0
+(64,74) delay 0.010 prob 0.0
+(74,84) delay 0.010 prob 0.0
+(84,94) delay 0.010 prob 0.0
+
+# Column 5
+(5,15) delay 0.010 prob 0.0
+(15,25) delay 0.010 prob 0.0
+(25,35) delay 0.010 prob 0.0
+(35,45) delay 0.010 prob 0.0
+(45,55) delay 0.010 prob 0.0
+(55,65) delay 0.010 prob 0.0
+(65,75) delay 0.010 prob 0.0
+(75,85) delay 0.010 prob 0.0
+(85,95) delay 0.010 prob 0.0
+
+# Column 6
+(6,16) delay 0.010 prob 0.0
+(16,26) delay 0.010 prob 0.0
+(26,36) delay 0.010 prob 0.0
+(36,46) delay 0.010 prob 0.0
+(46,56) delay 0.010 prob 0.0
+(56,66) delay 0.010 prob 0.0
+(66,76) delay 0.010 prob 0.0
+(76,86) delay 0.010 prob 0.0
+(86,96) delay 0.010 prob 0.0
+
+# Column 7
+(7,17) delay 0.010 prob 0.0
+(17,27) delay 0.010 prob 0.0
+(27,37) delay 0.010 prob 0.0
+(37,47) delay 0.010 prob 0.0
+(47,57) delay 0.010 prob 0.0
+(57,67) delay 0.010 prob 0.0
+(67,77) delay 0.010 prob 0.0
+(77,87) delay 0.010 prob 0.0
+(87,97) delay 0.010 prob 0.0
+
+# Column 8
+(8,18) delay 0.010 prob 0.0
+(18,28) delay 0.010 prob 0.0
+(28,38) delay 0.010 prob 0.0
+(38,48) delay 0.010 prob 0.0
+(48,58) delay 0.010 prob 0.0
+(58,68) delay 0.010 prob 0.0
+(68,78) delay 0.010 prob 0.0
+(78,88) delay 0.010 prob 0.0
+(88,98) delay 0.010 prob 0.0
+
+# Column 9
+(9,19) delay 0.010 prob 0.0
+(19,29) delay 0.010 prob 0.0
+(29,39) delay 0.010 prob 0.0
+(39,49) delay 0.010 prob 0.0
+(49,59) delay 0.010 prob 0.0
+(59,69) delay 0.010 prob 0.0
+(69,79) delay 0.010 prob 0.0
+(79,89) delay 0.010 prob 0.0
+(89,99) delay 0.010 prob 0.0
+
+# Column 10
+(10,20) delay 0.010 prob 0.0
+(20,30) delay 0.010 prob 0.0
+(30,40) delay 0.010 prob 0.0
+(40,50) delay 0.010 prob 0.0
+(50,60) delay 0.010 prob 0.0
+(60,70) delay 0.010 prob 0.0
+(70,80) delay 0.010 prob 0.0
+(80,90) delay 0.010 prob 0.0
+(90,100) delay 0.010 prob 0.0
+
+# Diagonal links (connecting nodes diagonally for redundancy)
+# Diagonals from left to right
+(1,12) delay 0.014 prob 0.0
+(2,13) delay 0.014 prob 0.0
+(3,14) delay 0.014 prob 0.0
+(4,15) delay 0.014 prob 0.0
+(5,16) delay 0.014 prob 0.0
+(6,17) delay 0.014 prob 0.0
+(7,18) delay 0.014 prob 0.0
+(8,19) delay 0.014 prob 0.0
+(9,20) delay 0.014 prob 0.0
+
+(11,22) delay 0.014 prob 0.0
+(12,23) delay 0.014 prob 0.0
+(13,24) delay 0.014 prob 0.0
+(14,25) delay 0.014 prob 0.0
+(15,26) delay 0.014 prob 0.0
+(16,27) delay 0.014 prob 0.0
+(17,28) delay 0.014 prob 0.0
+(18,29) delay 0.014 prob 0.0
+(19,30) delay 0.014 prob 0.0
+
+# Continue the pattern up to the last possible diagonal
+(81,92) delay 0.014 prob 0.0
+(82,93) delay 0.014 prob 0.0
+(83,94) delay 0.014 prob 0.0
+(84,95) delay 0.014 prob 0.0
+(85,96) delay 0.014 prob 0.0
+(86,97) delay 0.014 prob 0.0
+(87,98) delay 0.014 prob 0.0
+(88,99) delay 0.014 prob 0.0
+(89,100) delay 0.014 prob 0.0
+
+# Random long-distance links (to simulate shortcut paths)
+(1,50) delay 0.050 prob 0.0
+(25,75) delay 0.050 prob 0.0
+(10,100) delay 0.050 prob 0.0
+(40,60) delay 0.050 prob 0.0
+(5,95) delay 0.050 prob 0.0
+
+[events]
+# Initial data transmissions to test initial routing
+1.00    xmit (1,100)
+2.00    xmit (50,75)
+3.00    xmit (25,80)
+4.00    xmit (60,20)
+5.00    xmit (10,90)
+
+# Simulate link failures
+100.00  linkdying (5,6)
+101.00  linkdying (55,56)
+102.00  linkdying (95,96)
+103.00  linkdying (45,46)
+104.00  linkdying (75,76)
+
+# Data transmissions after failures to test rerouting
+110.00  xmit (1,100)
+111.00  xmit (50,75)
+112.00  xmit (25,80)
+113.00  xmit (60,20)
+114.00  xmit (10,90)
+
+# Simulate link recoveries
+200.00  linkcomingup (5,6)
+201.00  linkcomingup (55,56)
+202.00  linkcomingup (95,96)
+203.00  linkcomingup (45,46)
+204.00  linkcomingup (75,76)
+
+# Data transmissions after recoveries to test route updates
+210.00  xmit (1,100)
+211.00  xmit (50,75)
+212.00  xmit (25,80)
+213.00  xmit (60,20)
+214.00  xmit (10,90)
+
+# Simulate delay changes
+300.00  changedelay (1,2) 0.050
+301.00  changedelay (2,3) 0.050
+302.00  changedelay (3,4) 0.050
+303.00  changedelay (4,5) 0.050
+304.00  changedelay (5,6) 0.050
+
+# Data transmissions to test delay-based routing decisions
+310.00  xmit (1,100)
+311.00  xmit (10,91)
+312.00  xmit (20,80)
+
+# Simulate packet loss on certain links
+400.00  linkdying (40,50)
+400.01  linkcomingup (40,50) delay 0.010 prob 0.3
+401.00  linkdying (60,70)
+401.01  linkcomingup (60,70) delay 0.010 prob 0.3
+
+# Data transmissions to test routing with unreliable links
+410.00  xmit (1,100)
+411.00  xmit (30,90)
+412.00  xmit (50,70)
+
+# Simulate asymmetric delays
+500.00  changedelay (80,90) 0.010
+500.01  changedelay (90,80) 0.050
+
+# Data transmissions to test handling of asymmetric delays
+510.00  xmit (80,90)
+511.00  xmit (90,80)
+
+# Simulate rapid topology changes
+600.00  linkdying (20,30)
+600.50  linkcomingup (20,30)
+601.00  linkdying (20,30)
+601.50  linkcomingup (20,30)
+
+# Data transmissions during rapid changes
+605.00  xmit (1,100)
+606.00  xmit (25,75)
+
+# Simulate network partition and healing
+700.00  linkdying (50,60)
+701.00  linkdying (60,70)
+702.00  linkdying (70,80)
+703.00  linkdying (80,90)
+# Network is partitioned between nodes 1-50 and 51-100
+
+# Data transmissions during partition (should fail)
+710.00  xmit (10,90)
+711.00  xmit (30,80)
+
+# Heal the network
+800.00  linkcomingup (50,60)
+801.00  linkcomingup (60,70)
+802.00  linkcomingup (70,80)
+803.00  linkcomingup (80,90)
+
+# Data transmissions after healing (should succeed)
+810.00  xmit (10,90)
+811.00  xmit (30,80)
+
+# End the simulation
+900.00  end

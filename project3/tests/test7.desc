@@ -1,0 +1,8 @@
+Test Rapid Topology changes. The protocol should cope with rapid topology changes without becoming unstable or generating excessive control traffic.
+
+Tests whether:
+1) Topology changes are handled gracefully at high rates
+
+At time 1.00, node 1 sends data to node 3.
+Between times 5.00 and 8.00, link (1,2) rapidly goes down and up.
+At time 9.00, node 1 sends data to node 3.
