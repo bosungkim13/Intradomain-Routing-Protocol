@@ -6,8 +6,6 @@ DistanceVector::DistanceVector() : sys(nullptr), myRouterID(0), adjacencyList(nu
 DistanceVector::DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), numPorts(numPorts) {}
 // DistanceVector::DistanceVector(Node *n, router_id id, adjacencyList_ref adjList, portStatus_ref portStatus, DVForwardingTable forwardingTable, port_num numPorts) : sys(n), myRouterID(id), adjacencyList(adjList), portStatus(portStatus), forwardingTable(forwardingTable), numPorts(numPorts), seqNum(0) {}
 
-const bool verbose = true;
-
 // Populate a distance vector packet and set the packet's destination as
 // neighborID (since DV packets are only sent to immediate neighbors)
 Packet DistanceVector::createDVPacket(unsigned short neighborID)
