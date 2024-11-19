@@ -1,0 +1,10 @@
+(TODO: delete this line) "You should include a test.txt file with your project submission to explain your testing strategy
+and the test cases that you have developed"
+
+Description of our testing strategy:
+
+1. ...
+
+2. ...
+
+...
