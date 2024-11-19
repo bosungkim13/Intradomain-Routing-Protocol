@@ -14,11 +14,11 @@ void* serializePacket(Packet serializeMe) {
     if (buffer == nullptr) {
         return nullptr; // Check for allocation failure
     }
-    std::cout << "serializePacket successfully malloc'd mySize = " << mySize << " bytes" << std::endl; // debug code
+    if (verbose) std::cout << "serializePacket successfully malloc'd mySize = " << mySize << " bytes" << std::endl; // debug code
 
 
     memcpy(buffer, &header, HEADER_SIZE);
-    std::cout << "serializePacket successfully memcpy'd header with HEADER_SIZE = " << HEADER_SIZE << " bytes" << std::endl; // debug code
+    if (verbose) std::cout << "serializePacket successfully memcpy'd header with HEADER_SIZE = " << HEADER_SIZE << " bytes" << std::endl; // debug code
 
 
     // Copy the payload. Could be less than the maximum payload size.
@@ -41,10 +41,10 @@ void* serializePacket(Packet serializeMe) {
             offset += sizeof(cost);
         }
     } else if (header.packetType == DV) {
-        std::cout << "serializePacket entered DV code block" << std::endl; // debug code
+        if (verbose) std::cout << "serializePacket entered DV code block" << std::endl; // debug code
 
         unsigned int numEntries = (mySize - HEADER_SIZE) / (2 * sizeof(router_id) + sizeof(cost)); 
-        std::cout << "serializePacket DV numEntries calculated as " << numEntries << " with remainder = " << (mySize - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) << std::endl; // debug code
+        if (verbose) std::cout << "serializePacket DV numEntries calculated as " << numEntries << " with remainder = " << (mySize - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) << std::endl; // debug code
 
         assert((mySize - HEADER_SIZE) % (2 * sizeof(router_id) + sizeof(cost)) == 0); // TEMPORARY CODE, DELETE LATER
 
@@ -71,7 +71,7 @@ void* serializePacket(Packet serializeMe) {
     } else if (header.packetType == DATA) {
         memcpy((char*)buffer + offset, &serializeMe.payload[offset - HEADER_SIZE], mySize - HEADER_SIZE);
     } else {
-        std::cout << "serializePacket(): Unknown packet type. Not processing payload." << std::endl;
+        if (verbose) std::cout << "serializePacket(): Unknown packet type. Not processing payload." << std::endl;
     }
     
     return buffer; // Return the serialized packet

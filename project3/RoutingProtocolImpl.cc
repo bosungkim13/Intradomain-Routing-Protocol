@@ -90,7 +90,7 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
       this->sys->set_alarm(this, 1 * 1000, data);
       break;
     default:
-      std::cout << "handle_alarm(): Unknown alarm type." << std::endl;
+      if (verbose) std::cout << "handle_alarm(): Unknown alarm type." << std::endl;
       break;
   }
 }
@@ -98,7 +98,7 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
 void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short size) {
   // add your own code
   Packet deserializedPacket = deserializePacket(packet);
-  cout << "Currently on router ID " << this->routerID << endl;
+  // cout << "Currently on router ID " << this->routerID << endl;
   switch (deserializedPacket.header.packetType) {
     case PING:
       // Handle PING packet
@@ -198,8 +198,10 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   // Calculate RTT
   time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload); // TODO: how did removing ntohl fix it????
   time_stamp currTimestamp = sys->time();
-  cout << "prevTimestamp: " << prevTimestamp << endl;
-  cout << "currTimestamp: " << currTimestamp << endl;
+  if (verbose) {
+    cout << "prevTimestamp: " << prevTimestamp << endl;
+    cout << "currTimestamp: " << currTimestamp << endl;
+  }
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
   // std::cout << "handlePongs(): RTT = " << rtt << std::endl;
@@ -232,8 +234,6 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     // std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
     // std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
     // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
-    cout << "old time cost: " << oldTimeCost << endl;
-    cout << "new time cost: " << adjacencyList[pongPacket.header.sourceID].timeCost << endl; 
     int changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
     // send updates to all neighbors
@@ -276,13 +276,13 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   // TODO: Implement handling for when data packet origniates from this router
   if (dataPacket.header.sourceID == SPECIAL_PORT) {
     dataPacket.header.sourceID = this->routerID;
-    std::cout << "handleData(): Data packet originates from router "  << dataPacket.header.sourceID << " going to router " << dataPacket.header.destID << std::endl;
+    if (verbose) std::cout << "handleData(): Data packet originates from router "  << dataPacket.header.sourceID << " going to router " << dataPacket.header.destID << std::endl;
     handleMe = serializePacket(dataPacket);
   }
 
 
   if (dataPacket.header.packetType != DATA) {
-    std::cout << "handleData(): Packet type is not DATA." << std::endl;
+    if (verbose) std::cout << "handleData(): Packet type is not DATA." << std::endl;
   }
 
   if (destId == this->routerID) {
@@ -301,14 +301,16 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
     if (this->myDV.forwardingTable.table.count(destId) == 0) {
       router_id nextHopRouterID = this->myDV.forwardingTable.table[destId].nextHop;
       port_num nextHopPort = adjacencyList[nextHopRouterID].port;
-      cout << "About to send packet to next hop" << endl;
-      cout << "Sending it from router ID " << this->routerID << " to nextHopRouterID " << this->myDV.forwardingTable.table[destId].nextHop << " and nextHopPort " << nextHopPort << endl;
+      if (verbose) {
+        cout << "About to send packet to next hop" << endl;
+        cout << "Sending it from router ID " << this->routerID << " to nextHopRouterID " << this->myDV.forwardingTable.table[destId].nextHop << " and nextHopPort " << nextHopPort << endl;
+      }
       // If the destination is in the forwarding table, send the packet to the next hop's port (not the router id!)
       sys->send(nextHopPort, handleMe, dataPacket.header.size);
   }
   
   // If it makes it here, the destination is not in forwarding table and the packet is lost
-  std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
+  if (verbose) std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
 
 }
 }
