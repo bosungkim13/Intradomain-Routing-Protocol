@@ -1,0 +1,59 @@
+Network is intentionally irregular, with a mix of high-degree nodes (hubs), low-degree nodes (leaf nodes), asymmetric links,
+potential routing loops, critical nodes whose failure can partition the network, and links with high packet loss probabilities
+
+Initial Data Transmissions (1.00 - 5.00):
+
+Testing initial routing table setup and ensuring data reaches its destination.
+Simulate Link Failures (50.00 - 52.00):
+
+Failures of critical links and hubs to test the protocol's response.
+Assessing route recalculations and partition detection.
+Data Transmissions After Failures (60.00 - 63.00):
+
+Testing whether data is rerouted correctly or fails gracefully if the destination is unreachable.
+Rapid Topology Changes (70.00 - 72.50):
+
+Links rapidly go down and come back up.
+Testing protocol stability and responsiveness to frequent changes.
+Data Transmissions During Rapid Changes (75.00 - 76.00):
+
+Ensuring the protocol handles rapid changes without routing loops or instability.
+Asymmetric Delay Changes (80.00 - 80.01):
+
+Changing delays to create asymmetry.
+Testing the protocol's ability to handle asymmetric link costs.
+Data Transmissions for Asymmetric Delays (85.00 - 86.00):
+
+Verifying that the protocol calculates the best path considering asymmetric delays.
+Simulate Link Recoveries (90.00 - 92.00):
+
+Restoring previously failed links.
+Testing whether the protocol updates routes to use the restored links.
+Data Transmissions After Recoveries (95.00 - 97.00):
+
+Ensuring optimal routing is resumed after recoveries.
+High Packet Loss Links (100.00 - 101.01):
+
+Introducing unreliable links with high packet loss probabilities.
+Testing the protocol's preference for reliable paths over unreliable ones.
+Data Transmissions with Unreliable Links (105.00 - 106.00):
+
+Verifying that the protocol avoids high-loss links when better alternatives exist.
+Critical Node Failure (110.00 - 110.09):
+
+Simulating the failure of a critical node (node 25) by bringing down all its links.
+Testing the protocol's handling of node failures that affect multiple connections.
+Data Transmissions After Critical Node Failure (115.00 - 116.00):
+
+Checking if data can still reach destinations despite the critical node failure.
+Network Partition and Healing (120.00 - 131.00):
+
+Deliberately partitioning the network and then restoring it.
+Testing the protocol's ability to detect partitions and recover from them.
+Data Transmissions During and After Partition (125.00 - 136.00):
+
+Ensuring the protocol handles unreachable destinations correctly during partition.
+Verifying that communication resumes after the network heals.
+End of Simulation (140.00):
+
+Marks the end of the test.

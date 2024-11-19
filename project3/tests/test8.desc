@@ -1,0 +1,11 @@
+Large network with changing delays. Should adjust routes based on the most current delay information, choosing the path with the least total delay.
+
+Test whether:
+1) Handle link delay changes
+2) Large network with changing delays
+
+At time 1.00, node 1 sends data to node 10; should use the chain due to lower total delay.
+At time 100.00, delay on direct link (1,10) decreases to 0.010.
+At time 110.00, node 1 sends data to node 10; should now use the direct link.
+At time 200.00, delay on direct link increases to 1.000.
+At time 210.00, node 1 sends data to node 10; should revert to using the chain.

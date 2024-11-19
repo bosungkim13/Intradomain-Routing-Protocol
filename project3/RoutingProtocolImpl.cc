@@ -98,26 +98,33 @@ void RoutingProtocolImpl::handle_alarm(void *data) {
 void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short size) {
   // add your own code
   Packet deserializedPacket = deserializePacket(packet);
+  cout << "Currently on router ID " << this->routerID << endl;
   switch (deserializedPacket.header.packetType) {
     case PING:
       // Handle PING packet
+      * (time_stamp *) deserializedPacket.payload = ntohl(*(time_stamp *) deserializedPacket.payload);
       this->handlePings(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     case PONG:
       // Handle PONG packet
       this->handlePongs(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     case DATA:
       // Handle DATA packet
       this->handleData(port, packet);
+      // Can't free the received packet's memory because it gets reused when forwarding the packet
       break;
     case LS:
       // Handle LS packet
       this->myLSRP.HandlePacket(port, packet, size);
+      // Question for Bosung: should we free the received packet's memory here?
       break;
     case DV:
       // Handle DV packet
       this->myDV.handleDVPacket(port, deserializedPacket);
+      free(packet); // free the received packet's memory bc it won't be re-used
       break;
     default:
       // Handle unknown packet type
@@ -136,7 +143,9 @@ void RoutingProtocolImpl::sendPings() {
     Packet packet;
     time_stamp timestamp = sys->time(); // Set timestamp
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
-
+    // verify that timestamp was copied to packet.payload
+    // cout << "Timestamp sanity check inside of sendPings(): " << *(time_stamp*)packet.payload << endl;
+    // cout << "sys->time(): " << sys->time() << endl;
     PacketHeader *packetHeader = &packet.header;
     packetHeader->packetType = PING; // Set packet type
     packetHeader->size = size; // Set packet size
@@ -151,6 +160,9 @@ void RoutingProtocolImpl::sendPings() {
     assert(packet.header.size == HEADER_SIZE + sizeof(time_stamp));
     void *serializedPacket = serializePacket(packet);
 
+    // sanity check to deserialize the packet
+    // Packet deserializedPacket = deserializePacket(serializedPacket);
+    // cout << "Deserialized packet timestamp right before sending: " << ntohl(*(time_stamp*)deserializedPacket.payload) << endl;
     // Send the packet
     sys->send(i, serializedPacket, size);
   }
@@ -169,8 +181,9 @@ void RoutingProtocolImpl::handlePings(unsigned short port, Packet pingPacket) {
   pingPacket.header.packetType = PONG;
   pingPacket.header.destID = pingPacket.header.sourceID;
   pingPacket.header.sourceID = this->routerID;
-
   assert(pingPacket.header.packetType == PONG);
+  // print entire payload
+  // cout << "Ping packet timestamp: " << ntohl(*(time_stamp*)pingPacket.payload) << endl;
   void *serializedPongPacket = serializePacket(pingPacket);
   sys->send(port, serializedPongPacket, pingPacket.header.size);
 }
@@ -183,8 +196,10 @@ to the current time to compute the RTT.
 */
 void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   // Calculate RTT
-  time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload);
+  time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload); // TODO: how did removing ntohl fix it????
   time_stamp currTimestamp = sys->time();
+  cout << "prevTimestamp: " << prevTimestamp << endl;
+  cout << "currTimestamp: " << currTimestamp << endl;
   // assert(prevTimestamp <= currTimestamp);
   time_stamp rtt = currTimestamp - prevTimestamp;
   // std::cout << "handlePongs(): RTT = " << rtt << std::endl;
@@ -217,7 +232,9 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     // std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
     // std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
     // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
-    cost changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
+    cout << "old time cost: " << oldTimeCost << endl;
+    cout << "new time cost: " << adjacencyList[pongPacket.header.sourceID].timeCost << endl; 
+    int changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
     // send updates to all neighbors
     this->myDV.sendUpdates();
@@ -280,9 +297,14 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
       sys->send(this->adjacencyList[destId].port, handleMe, dataPacket.header.size);
     }
   } else if (this->protocolType == P_DV) { 
-    if (this->myDV.forwardingTable.table.find(destId) != this->myDV.forwardingTable.table.end()) {
-      // If the destination is in the forwarding table, send the packet to the next hop
-      sys->send(this->myDV.forwardingTable.table[destId].nextHop, handleMe, dataPacket.header.size);
+
+    if (this->myDV.forwardingTable.table.count(destId) == 0) {
+      router_id nextHopRouterID = this->myDV.forwardingTable.table[destId].nextHop;
+      port_num nextHopPort = adjacencyList[nextHopRouterID].port;
+      cout << "About to send packet to next hop" << endl;
+      cout << "Sending it from router ID " << this->routerID << " to nextHopRouterID " << this->myDV.forwardingTable.table[destId].nextHop << " and nextHopPort " << nextHopPort << endl;
+      // If the destination is in the forwarding table, send the packet to the next hop's port (not the router id!)
+      sys->send(nextHopPort, handleMe, dataPacket.header.size);
   }
   
   // If it makes it here, the destination is not in forwarding table and the packet is lost

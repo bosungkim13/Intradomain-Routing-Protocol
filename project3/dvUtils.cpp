@@ -10,10 +10,9 @@ DVForwardingTable::DVForwardingTable(Node * n)
 DVForwardingTable::DVForwardingTable()
     : context(nullptr) {};
 
-void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost)
+void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verbose)
 {
     // print update statement for debug
-    cout << "Updating route to " << destination << " via " << nextHop << " with cost " << routeCost << endl;
     table[destination] = DVRoute(nextHop, routeCost, context->time());
 }
 

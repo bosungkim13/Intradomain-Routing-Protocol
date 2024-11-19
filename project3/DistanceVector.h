@@ -27,7 +27,7 @@ public:
 
     bool portExpiredCheck();
 
-    void handleCostChange(port_num port, cost changeCost);
+    void handleCostChange(port_num port, int changeCost);
 
     void sendUpdates();
 

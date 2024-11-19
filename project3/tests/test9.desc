@@ -1,0 +1,39 @@
+The nodes are arranged in a 10x10 grid, with each node connected to its immediate neighbors horizontally and vertically.
+
+Tests whether:
+
+Initial Data Transmissions (1.00 - 5.00): Tests the initial state of the routing tables and the protocol's ability to find optimal paths in a fully operational network.
+
+Link Failures (100.00 - 104.00): Simulates failures on critical links to test the protocol's ability to detect failures and recompute routes.
+
+Data Transmissions After Failures (110.00 - 114.00): Ensures data packets are rerouted correctly using alternative paths.
+
+Link Recoveries (200.00 - 204.00): Tests the protocol's ability to reintegrate recovered links and update routing tables accordingly.
+
+Data Transmissions After Recoveries (210.00 - 214.00): Verifies that the protocol resumes using the optimal paths after link recoveries.
+
+Delay Changes (300.00 - 304.00): Changes the delays on a horizontal path to test if the protocol reroutes traffic to paths with lower delays.
+
+Data Transmissions to Test Delay-Based Routing (310.00 - 312.00): Checks whether the protocol chooses the new optimal paths based on updated delays.
+
+Packet Loss Simulation (400.00 - 401.01): Introduces unreliable links with a high packet loss probability to test routing decisions considering link reliability.
+
+Data Transmissions with Unreliable Links (410.00 - 412.00): Ensures the protocol avoids unreliable links when better alternatives exist.
+
+Asymmetric Delays (500.00 - 500.01): Sets different delays in opposite directions on a link to test handling of asymmetric link properties.
+
+Data Transmissions to Test Asymmetric Delays (510.00 - 511.00): Verifies that the protocol correctly calculates the best path in both directions.
+
+Rapid Topology Changes (600.00 - 601.50): Simulates rapid link failures and recoveries to test protocol stability and responsiveness.
+
+Data Transmissions During Rapid Changes (605.00 - 606.00): Checks if the protocol can handle frequent topology changes without significant issues.
+
+Network Partition (700.00 - 703.00): Deliberately partitions the network to test detection and appropriate routing behavior when parts of the network become unreachable.
+
+Data Transmissions During Partition (710.00 - 711.00): Confirms that the protocol recognizes unreachable destinations and handles them gracefully.
+
+Network Healing (800.00 - 803.00): Restores the network to test the protocol's ability to update routes when the partition is resolved.
+
+Data Transmissions After Healing (810.00 - 811.00): Ensures that communication between previously partitioned nodes is restored.
+
+End of Simulation (900.00): The simulation ends.
