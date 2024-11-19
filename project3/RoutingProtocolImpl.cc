@@ -266,9 +266,8 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   }
 }
 
+// This method will be called every time a DATA packet is received.
 void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
-  // TODO: Implement this method to handle DATA packets
-  //       (this method will be called every time a DATA packet is received)
   Packet dataPacket = deserializePacket(handleMe);
   dataPacket.header.packetType = DATA;
   router_id destId = dataPacket.header.destID;
@@ -286,6 +285,7 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   }
 
   if (destId == this->routerID) {
+    std::cout << "handleData(): destId == this->routerID." << std::endl;
     delete[] static_cast<char*>(handleMe);
     return;
   }
@@ -295,10 +295,10 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
     if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
       // If the destination is in the forwarding table, send the packet to the next hop
       sys->send(this->adjacencyList[destId].port, handleMe, dataPacket.header.size);
+      return;
     }
   } else if (this->protocolType == P_DV) { 
-
-    if (this->myDV.forwardingTable.table.count(destId) == 0) {
+    if (this->myDV.forwardingTable.table.count(destId) != 0) {
       router_id nextHopRouterID = this->myDV.forwardingTable.table[destId].nextHop;
       port_num nextHopPort = adjacencyList[nextHopRouterID].port;
       if (verbose) {
@@ -307,10 +307,11 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
       }
       // If the destination is in the forwarding table, send the packet to the next hop's port (not the router id!)
       sys->send(nextHopPort, handleMe, dataPacket.header.size);
-  }
+      return;
+    }
   
-  // If it makes it here, the destination is not in forwarding table and the packet is lost
-  if (verbose) std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
+    // If it makes it here, the destination is not in forwarding table and the packet is lost
+    if (verbose) std::cout << "handleData(): Destination is not in forwarding table." << std::endl;
 
 }
 }
