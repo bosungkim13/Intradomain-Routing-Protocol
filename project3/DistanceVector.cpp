@@ -10,7 +10,6 @@ const bool verbose = true;
 
 // Populate a distance vector packet and set the packet's destination as
 // neighborID (since DV packets are only sent to immediate neighbors)
-// NOTE: values are still in host order (serializePacket will convert endianness to network order)
 Packet DistanceVector::createDVPacket(unsigned short neighborID)
 {
 
@@ -175,6 +174,7 @@ bool DistanceVector::dvEntryExpiredCheck() {
     }
     for (router_id destID : removeSet) {
         forwardingTable.removeRoute(destID);
+        (*this->adjacencyList)[destID].timeCost = 0;
     }
 
     // print destination that expired
@@ -198,6 +198,7 @@ bool DistanceVector::portExpiredCheck() {
 
     for (router_id destID : removeSet) {
         this->forwardingTable.removeRoute(destID);
+        (*this->adjacencyList)[destID].timeCost = 0;
     }
 
     return removeSet.size() > 0;

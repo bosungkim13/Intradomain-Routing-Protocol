@@ -143,8 +143,8 @@ void RoutingProtocolImpl::sendPings() {
     time_stamp timestamp = sys->time(); // Set timestamp
     memcpy(packet.payload, &timestamp, sizeof(timestamp)); // Copy timestamp to payload
     // verify that timestamp was copied to packet.payload
-    cout << "Timestamp sanity check inside of sendPings(): " << *(time_stamp*)packet.payload << endl;
-    cout << "sys->time(): " << sys->time() << endl;
+    // cout << "Timestamp sanity check inside of sendPings(): " << *(time_stamp*)packet.payload << endl;
+    // cout << "sys->time(): " << sys->time() << endl;
     PacketHeader *packetHeader = &packet.header;
     packetHeader->packetType = PING; // Set packet type
     packetHeader->size = size; // Set packet size
