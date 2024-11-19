@@ -119,7 +119,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
     case LS:
       // Handle LS packet
       this->myLSRP.HandlePacket(port, packet, size);
-      // Question for Bosung: should we free the received packet's memory here?
+      // LinkState.HandlePacket() frees the received packet's memory, no need to call free here
       break;
     case DV:
       // Handle DV packet
