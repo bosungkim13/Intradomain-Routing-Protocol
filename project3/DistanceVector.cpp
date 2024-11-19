@@ -129,10 +129,11 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 //      If the port was previously offline, this will simply be the new RTT
 //  Note: no need to update timestamp in adjacencyList or portStatus since 
 //  those have been updated in RoutingProtocolImpl.cc before delegating to this
-void DistanceVector::handleCostChange(port_num port, cost changeCost)
+void DistanceVector::handleCostChange(port_num port, int changeCost)
 {
     if (verbose) {
         cout << "Cost change detected for neighbor " << (*portStatus)[port].destRouterID << " on port " << port << endl;
+        cout << "current cost: " << (*portStatus)[port].timeCost << ", change: " << changeCost << endl;
         cout << "Old cost: " << (*portStatus)[port].timeCost - changeCost << ", New cost: " << (*portStatus)[port].timeCost << endl;
         cout << "Old table for Router ID: " << this->myRouterID << endl;
         forwardingTable.printTable();

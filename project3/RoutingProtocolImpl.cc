@@ -102,6 +102,7 @@ void RoutingProtocolImpl::recv(unsigned short port, void *packet, unsigned short
   switch (deserializedPacket.header.packetType) {
     case PING:
       // Handle PING packet
+      * (time_stamp *) deserializedPacket.payload = ntohl(*(time_stamp *) deserializedPacket.payload);
       this->handlePings(port, deserializedPacket);
       free(packet); // free the received packet's memory bc it won't be re-used
       break;
@@ -195,7 +196,7 @@ to the current time to compute the RTT.
 */
 void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
   // Calculate RTT
-  time_stamp prevTimestamp = (*(time_stamp*)pongPacket.payload); // TODO: how did removing ntohl fix it????
+  time_stamp prevTimestamp = ntohl(*(time_stamp*)pongPacket.payload); // TODO: how did removing ntohl fix it????
   time_stamp currTimestamp = sys->time();
   cout << "prevTimestamp: " << prevTimestamp << endl;
   cout << "currTimestamp: " << currTimestamp << endl;
@@ -231,7 +232,9 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     // std::cout << "handlePongs(): oldTimeCost = " << oldTimeCost << std::endl;
     // std::cout << "handlePongs(): newTimeCost = " << adjacencyList[pongPacket.header.sourceID].timeCost << std::endl;
     // for DV, call "handleCostChange()" whether or not timecost changed. This is because it still needs to update "lastUpdated" time stamp for each DV entry associated with this link
-    cost changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
+    cout << "old time cost: " << oldTimeCost << endl;
+    cout << "new time cost: " << adjacencyList[pongPacket.header.sourceID].timeCost << endl; 
+    int changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
     // send updates to all neighbors
     this->myDV.sendUpdates();
