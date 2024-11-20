@@ -8,6 +8,8 @@ class DistanceVector
 public:
     DVForwardingTable forwardingTable;
 
+    DVBigTable bigTable;
+
     DistanceVector(); // Default constructor is unused, but necessary for compilation
     DistanceVector(Node* n, router_id id, adjacencyList_ptr adjList, portStatus_ptr portStatus, port_num numPorts);
 

@@ -10,20 +10,28 @@
 #include <arpa/inet.h>
 
 // Distance Vector Route struct is used within the Distance Vector Routing Table
-struct DVRoute
+struct ForwardingEntry
 {
     router_id nextHop; // ID of the next hop router
     cost routeCost;    // Cost to reach the destination via this route
     time_stamp lastUpdate; // Time of last update
 
     // Constructor with default cost set to maximum value (representing infinity)
-    DVRoute(router_id hop = 0, cost c = USHRT_MAX, time_stamp t = 0);
+    ForwardingEntry(router_id hop = 0, cost c = USHRT_MAX, time_stamp t = 0);
+};
+
+struct DVRouteInfo {
+    cost routeCost;
+    time_stamp lastUpdated;
+
+    DVRouteInfo(cost c = 0, time_stamp t = 0)
+        : routeCost(c), lastUpdated(t) {}
 };
 
 // Distance Vector Forwarding Table
 struct DVForwardingTable
 {
-    unordered_map<router_id, DVRoute> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
+    unordered_map<router_id, ForwardingEntry> table; // Mapping from destination router_id to Route (which contains nextHop and routeCost)
     Node * context;
 
     DVForwardingTable(); // Default constructor is unused, but necessary for compilation
@@ -34,7 +42,7 @@ struct DVForwardingTable
     void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false);
 
     // Get the route for a given destination, if it exists
-    DVRoute getRoute(router_id destination) const;
+    ForwardingEntry getRoute(router_id destination) const;
 
     // Remove a route for a given destination
     void removeRoute(router_id destination);
@@ -47,6 +55,55 @@ struct DVForwardingTable
     void printTable();
 };
 
+struct DVBigTable
+{
+    unordered_map<router_id, unordered_map<router_id, DVRouteInfo>> table;
+
+    // Add or update a route for a destination
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false);
+
+    // Get the route for a given destination, if it exists
+    ForwardingEntry getRoute(router_id destination) const;
+
+    // Remove a route for a given destination
+    void removeRoute(router_id destination);
+
+    // Removes the route and all routes that depend on this destination as the nextHop
+    void removeRouteModded(router_id destination);
+
+    // Check if a route exists for a destination
+    bool hasRoute(router_id destination) const;
+
+    void printTable();
+};
+
 DVForwardingTable deserializeDVPayload(Packet packet, Node * n);
+
+
+struct DVBigTable {
+    unordered_map<router_id, unordered_map<router_id, DVRouteInfo>> table;
+
+    // Add or update a route for a destination
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, time_stamp lastUpdated, bool verb = false);
+
+    // Get the route for a given destination and next hop, if it exists
+    DVRouteInfo getRoute(router_id destination, router_id nextHop) const;
+
+    // Gets the best route for a given destination, but returns a route with cost USHRT_MAX if no route exists
+    ForwardingEntry getBestRoute(router_id destination) const;
+
+    // Remove a route for a given destination
+    void removeRoute(router_id destination);
+
+    // Remove routes that depend on a given next hop
+    void removeRouteModded(router_id nextHop);
+
+    // Check if a route exists for a destination
+    bool hasRoute(router_id destination) const;
+
+    // Print the table
+    void printTable() const;
+};
+
 
 #endif

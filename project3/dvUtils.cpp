@@ -2,7 +2,7 @@
 #include "VariadicTable.h"
 #include <unordered_set>
 
-DVRoute::DVRoute(router_id hop, cost c, time_stamp t)
+ForwardingEntry::ForwardingEntry(router_id hop, cost c, time_stamp t)
     : nextHop(hop), routeCost(c), lastUpdate(t) {};
 
 DVForwardingTable::DVForwardingTable(Node * n)
@@ -14,10 +14,10 @@ DVForwardingTable::DVForwardingTable()
 void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb)
 {
     // print update statement for debug
-    table[destination] = DVRoute(nextHop, routeCost, context->time());
+    table[destination] = ForwardingEntry(nextHop, routeCost, context->time());
 }
 
-DVRoute DVForwardingTable::getRoute(router_id destination) const
+ForwardingEntry DVForwardingTable::getRoute(router_id destination) const
 {
     auto it = table.find(destination);
     if (it != table.end())
@@ -25,7 +25,7 @@ DVRoute DVForwardingTable::getRoute(router_id destination) const
         return it->second;
     }
     // Return a route with max cost if destination is not found (infinity equivalent)
-    return DVRoute(0, USHRT_MAX, context->time()); // return the current time for now?
+    return ForwardingEntry(0, USHRT_MAX, context->time()); // return the current time for now?
 }
 
 void DVForwardingTable::removeRoute(router_id destination)
@@ -41,7 +41,7 @@ void DVForwardingTable::removeRouteModded(router_id destination) {
     unordered_set<router_id> removeSet;
     for (auto row : table) {
         router_id destID = row.first;
-        DVRoute route = row.second;
+        ForwardingEntry route = row.second;
         if (route.nextHop == destination) {
             removeSet.insert(destID);
         }
@@ -97,3 +97,88 @@ DVForwardingTable deserializeDVPayload(Packet packet, Node * n)
     
     return table;
 }
+
+
+
+////////////////// 
+// DV Big Table
+
+struct DVBigTable {
+    unordered_map<router_id, unordered_map<router_id, cost>> table;
+
+    // Add or update a route for a destination
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false) {
+        if (verb) {
+            cout << "Updating route to " << destination << " via " << nextHop
+                 << " with cost " << routeCost << endl;
+        }
+        table[destination][nextHop] = routeCost;
+    }
+
+    ForwardingEntry DVBigTable::getBestRoute(router_id destination) const {
+        auto destIt = table.find(destination);
+        if (destIt == table.end() || destIt->second.empty()) {
+            // If the destination doesn't exist or has no valid routes, return a default DVRoute
+            return ForwardingEntry(0, USHRT_MAX, 0); // Infinite cost indicates no valid route
+        }
+
+        const auto& nextHops = destIt->second;
+        router_id bestNextHop = 0;
+        cost lowestCost = USHRT_MAX;
+        time_stamp bestLastUpdated = 0;
+
+        for (const auto& pair : nextHops) {
+            const router_id nextHop = pair.first;
+            const DVRouteInfo& routeInfo = pair.second;
+
+            if (routeInfo.routeCost < lowestCost) {
+                bestNextHop = nextHop;
+                lowestCost = routeInfo.routeCost;
+                bestLastUpdated = routeInfo.lastUpdated;
+            }
+        }
+
+        return ForwardingEntry(bestNextHop, lowestCost, bestLastUpdated);
+    }
+
+    // Remove a route for a given destination
+    void removeRoute(router_id destination) {
+        cout << "Removing all routes to " << destination << endl;
+        table.erase(destination);
+    }
+
+    // Remove routes that rely on a specific next hop
+    void removeRouteModded(router_id destination) {
+        unordered_set<router_id> toRemove;
+        for (auto &entry : table) {
+            auto &nextHops = entry.second;
+            if (nextHops.erase(destination) > 0) {
+                cout << "Removing route to " << entry.first
+                     << " as it was routed through the dead link to " << destination << endl;
+            }
+            if (nextHops.empty()) {
+                toRemove.insert(entry.first);
+            }
+        }
+        for (router_id dest : toRemove) {
+            table.erase(dest);
+        }
+    }
+
+    // Check if a route exists for a destination
+    bool hasRoute(router_id destination) const {
+        auto it = table.find(destination);
+        return it != table.end() && !it->second.empty();
+    }
+
+    // Print the routing table
+    void printTable() {
+        VariadicTable<router_id, router_id, cost> vt({"Destination", "Next Hop", "Route Cost"});
+        for (const auto &row : table) {
+            for (const auto &hop : row.second) {
+                vt.addRow(row.first, hop.first, hop.second);
+            }
+        }
+        vt.print(cout);
+    }
+};
