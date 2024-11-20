@@ -1,4 +1,5 @@
 #include "DistanceVector.h"
+#include "sharedUtils.h"
 #include <climits>
 #include <unordered_set>
 
@@ -99,11 +100,13 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
             // TODO: add another check to see if the destID is associated with any neighbor in adjacencyList. If so, verify the port is alive.
             // If the port is dead, don't update the route.
 
-            if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
-            {
-                if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
-                continue;
-            }
+            // if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
+            // {
+            //     if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
+            //     continue;
+            // }
+
+            
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
             updateRequired = true;
         }
@@ -146,6 +149,14 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
         if (route.nextHop == neighborID)
         {
             forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost, verbose); 
+        }
+        // If the destination is the neighbor, update the cost to the neighbor
+        // Note that this logic overlaps with the above if statement,
+        // but it's necessary to handle the case where the best previous path to the destination did
+        // have the neighbor as nextHop at all.
+        else if (dest == neighborID)
+        {
+            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost, verbose);
         }
     }
 
@@ -191,12 +202,13 @@ bool DistanceVector::portExpiredCheck() {
         if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;
+            cout << "Port to destination " << it->second.destRouterID << " has expired." << endl;
             removeSet.insert(it->second.destRouterID);
         }
     }
 
     for (router_id destID : removeSet) {
-        this->forwardingTable.removeRoute(destID);
+        this->forwardingTable.removeRouteModded(destID);
         (*this->adjacencyList)[destID].timeCost = 0;
     }
 

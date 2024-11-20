@@ -1,5 +1,6 @@
 #include "dvUtils.h"
 #include "VariadicTable.h"
+#include <unordered_set>
 
 DVRoute::DVRoute(router_id hop, cost c, time_stamp t)
     : nextHop(hop), routeCost(c), lastUpdate(t) {};
@@ -10,7 +11,7 @@ DVForwardingTable::DVForwardingTable(Node * n)
 DVForwardingTable::DVForwardingTable()
     : context(nullptr) {};
 
-void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verbose)
+void DVForwardingTable::updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb)
 {
     // print update statement for debug
     table[destination] = DVRoute(nextHop, routeCost, context->time());
@@ -33,6 +34,24 @@ void DVForwardingTable::removeRoute(router_id destination)
     cout << "Removing route to " << destination << endl;
     table.erase(destination);
 }
+
+// modded version of remove route, when a link from A to B dies, it removes
+// routes that take B as the next hop 
+void DVForwardingTable::removeRouteModded(router_id destination) {
+    unordered_set<router_id> removeSet;
+    for (auto row : table) {
+        router_id destID = row.first;
+        DVRoute route = row.second;
+        if (route.nextHop == destination) {
+            removeSet.insert(destID);
+        }
+    }
+    for (router_id destID : removeSet) {
+        table.erase(destID);
+        cout << "Removing route to " << destID << " as it was routed through the dead link to " << destination << endl;
+    }
+}
+
 
 bool DVForwardingTable::hasRoute(router_id destination) const
 {

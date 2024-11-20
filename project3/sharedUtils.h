@@ -7,14 +7,14 @@
 #define HEADER_SIZE sizeof(PacketHeader)
 #define MAX_PAYLOAD_SIZE MAX_PACKET_SIZE - HEADER_SIZE
 
+#define verbose 1
+
 // Type aliases for convenience
 typedef unsigned short port_num;
 typedef unsigned short router_id;
 typedef unsigned short cost;
 typedef unsigned long time_stamp;
 typedef unsigned int seq_num;
-
-const bool verbose = false;
 
 // Define Neighbor struct
 struct Neighbor {
