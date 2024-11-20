@@ -248,7 +248,6 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
       cost oldTimeCost = this->adjacencyList[destID].timeCost;
       this->adjacencyList[destID].timeCost = rtt;
 
-      // TODO: change this to a range so we dont update for every single minimal change
       rttChanged = oldTimeCost != this->adjacencyList[destID].timeCost;
     } else {
       // Update the forwarding table? Should always be the same as

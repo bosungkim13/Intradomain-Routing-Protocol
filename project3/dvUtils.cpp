@@ -5,6 +5,9 @@
 ForwardingEntry::ForwardingEntry(router_id hop, cost c, time_stamp t)
     : nextHop(hop), routeCost(c), lastUpdate(t) {};
 
+RouteInfo::RouteInfo(router_id nextHop, cost routeCost)
+    : nextHop(nextHop), routeCost(routeCost) {};
+
 DVForwardingTable::DVForwardingTable(Node * n)
     : context(n) {};
 
@@ -107,19 +110,15 @@ struct DVBigTable {
     unordered_map<router_id, unordered_map<router_id, cost>> table;
 
     // Add or update a route for a destination
-    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false) {
-        if (verb) {
-            cout << "Updating route to " << destination << " via " << nextHop
-                 << " with cost " << routeCost << endl;
-        }
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb) {
         table[destination][nextHop] = routeCost;
     }
 
-    ForwardingEntry DVBigTable::getBestRoute(router_id destination) const {
+    RouteInfo getBestRoute(router_id destination) const {
         auto destIt = table.find(destination);
         if (destIt == table.end() || destIt->second.empty()) {
             // If the destination doesn't exist or has no valid routes, return a default DVRoute
-            return ForwardingEntry(0, USHRT_MAX, 0); // Infinite cost indicates no valid route
+            return RouteInfo(0, USHRT_MAX); // Infinite cost indicates no valid route
         }
 
         const auto& nextHops = destIt->second;
@@ -129,39 +128,63 @@ struct DVBigTable {
 
         for (const auto& pair : nextHops) {
             const router_id nextHop = pair.first;
-            const DVRouteInfo& routeInfo = pair.second;
+            const cost routeCost = pair.second;
 
-            if (routeInfo.routeCost < lowestCost) {
+            if (routeCost < lowestCost) {
                 bestNextHop = nextHop;
-                lowestCost = routeInfo.routeCost;
-                bestLastUpdated = routeInfo.lastUpdated;
+                lowestCost = routeCost;
             }
         }
 
-        return ForwardingEntry(bestNextHop, lowestCost, bestLastUpdated);
+        return RouteInfo(bestNextHop, lowestCost);
     }
 
     // Remove a route for a given destination
-    void removeRoute(router_id destination) {
-        cout << "Removing all routes to " << destination << endl;
-        table.erase(destination);
+    void removeRoute(router_id destination, router_id nextHop) {
+        auto destIt = table.find(destination);
+        if (destIt != table.end()) {
+            auto& nextHops = destIt->second;
+            auto nextHopIt = nextHops.find(nextHop);
+            if (nextHopIt != nextHops.end()) {
+                nextHops.erase(nextHopIt);  // Erase the next hop
+                std::cout << "Route to destination " << destination
+                        << " via next hop " << nextHop << " removed.\n";
+                if (nextHops.empty()) {
+                    table.erase(destIt); // Remove destination if no next hops remain
+                    std::cout << "Destination " << destination << " removed due to no remaining routes.\n";
+                }
+                return;  // Since nextHop is unique, we can exit after removal
+            } else {
+                std::cout << "No route via next hop " << nextHop
+                        << " for destination " << destination << ".\n";
+            }
+        } else {
+            std::cout << "Destination " << destination << " not found in the table.\n";
+        }
     }
 
-    // Remove routes that rely on a specific next hop
-    void removeRouteModded(router_id destination) {
-        unordered_set<router_id> toRemove;
-        for (auto &entry : table) {
-            auto &nextHops = entry.second;
-            if (nextHops.erase(destination) > 0) {
-                cout << "Removing route to " << entry.first
-                     << " as it was routed through the dead link to " << destination << endl;
+    // Remove routes that depend on this nextHop
+    void removeRoutesWithNextHop(router_id nextHop) {
+        for (auto destIt = table.begin(); destIt != table.end(); ) {
+            auto& nextHops = destIt->second;
+            auto nextHopIt = nextHops.find(nextHop);
+            if (nextHopIt != nextHops.end()) {
+                // Erase the route for this next hop
+                std::cout << "Removing route to destination " << destIt->first
+                        << " via next hop " << nextHop << ".\n";
+                nextHops.erase(nextHopIt);
+
+                // If no more next hops exist for this destination, erase the destination
+                if (nextHops.empty()) {
+                    std::cout << "Removing destination " << destIt->first
+                            << " as it has no remaining routes.\n";
+                    destIt = table.erase(destIt);  // Erase destination and move to next
+                } else {
+                    ++destIt; // If next hops still exist, just move to next destination
+                }
+            } else {
+                ++destIt;  // Move to the next destination if nextHop isn't found
             }
-            if (nextHops.empty()) {
-                toRemove.insert(entry.first);
-            }
-        }
-        for (router_id dest : toRemove) {
-            table.erase(dest);
         }
     }
 
