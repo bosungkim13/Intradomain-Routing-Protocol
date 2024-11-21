@@ -4,6 +4,7 @@
 #include <vector>
 #include "sharedUtils.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <limits>
 #include <stdlib.h>
 #include <cassert>
@@ -18,14 +19,6 @@ struct ForwardingEntry
 
     // Constructor with default cost set to maximum value (representing infinity)
     ForwardingEntry(router_id hop = 0, cost c = USHRT_MAX, time_stamp t = 0);
-};
-
-struct DVRouteInfo {
-    cost routeCost;
-    time_stamp lastUpdated;
-
-    DVRouteInfo(cost c = 0, time_stamp t = 0)
-        : routeCost(c), lastUpdated(t) {}
 };
 
 // Distance Vector Forwarding Table
@@ -57,20 +50,24 @@ struct DVForwardingTable
 
 DVForwardingTable deserializeDVPayload(Packet packet, Node * n);
 
+struct RouteInfo {
+    router_id nextHop;
+    cost routeCost;
+
+    RouteInfo(router_id nextHop, cost routeCost);
+};
+
 struct DVBigTable {
-    unordered_map<router_id, unordered_map<router_id, DVRouteInfo>> table;
+    unordered_map<router_id, unordered_map<router_id, cost>> table;
 
     // Add or update a route for a destination
-    void updateRoute(router_id destination, router_id nextHop, cost routeCost, time_stamp lastUpdated, bool verb = false);
-
-    // Get the route for a given destination and next hop, if it exists
-    DVRouteInfo getRoute(router_id destination, router_id nextHop) const;
+    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false);
 
     // Gets the best route for a given destination, but returns a route with cost USHRT_MAX if no route exists
-    ForwardingEntry getBestRoute(router_id destination) const;
+    RouteInfo getBestRoute(router_id destination) const;
 
     // Remove a route for a given destination
-    void removeRoute(router_id destination);
+    void removeRoute(router_id destination, router_id nextHop);
 
     // Remove routes that depend on a given next hop
     void removeRoutesWithNextHop(router_id nextHop);

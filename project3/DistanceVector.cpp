@@ -97,7 +97,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         }
         if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
-            bigTable.updateRoute(dest, forwardingTable.getRoute(dest).nextHop, forwardingTable.getRoute(dest).routeCost, forwardingTable.getRoute(dest).lastUpdate, verbose);
+            bigTable.updateRoute(dest, forwardingTable.getRoute(dest).nextHop, forwardingTable.getRoute(dest).routeCost, verbose);
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
             updateRequired = true;
         }
@@ -110,7 +110,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
             forwardingTable.removeRoute(dest);
             bigTable.removeRoute(dest, neighborID); // big table should remove all routes that depend on this neighbor as the nextHop
             // search for the next best option in the big table and repleace the route in the forwarding table
-            ForwardingEntry bestRoute = bigTable.getBestRoute(dest);
+            RouteInfo bestRoute = bigTable.getBestRoute(dest);
             if (bestRoute.routeCost != 0)
             {
                 forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
@@ -148,27 +148,28 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     }
     router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
-    // Update any routing table entries that use this link (uses neighborID as nextHop) with the new cost
-    for (auto row : forwardingTable.table)
-    {
-        auto dest = row.first;
-        auto route = row.second;
-        if (route.nextHop == neighborID)
-        {
-            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost, verbose); 
-        }
-        // If the destination is the neighbor, update the cost to the neighbor
-        // Note that this logic overlaps with the above if statement,
-        // but it's necessary to handle the case where the best previous path to the destination did
-        // have the neighbor as nextHop at all.
-        else if (dest == neighborID)
-        {
-            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost, verbose);
+    for (auto& pair : bigTable.table) { 
+        router_id destination = pair.first;
+        unordered_map<router_id, cost>& nextHops = pair.second;
+        // Check if the nextHop exists for this destination
+        auto hopIterator = nextHops.find(neighborID);
+        if (hopIterator != nextHops.end()) {
+            // Update the cost for the specified nextHop
+            cost& updatedCost = hopIterator->second;
+            updatedCost += changeCost;
+
+            // Check if this nextHop is now the minimum cost for the destination
+            RouteInfo bestRoute =  bigTable.getBestRoute(destination);
+            if (bestRoute.nextHop == neighborID) {
+                // Update the forwarding table
+                forwardingTable.updateRoute(destination, neighborID, updatedCost, verbose);
+            }
         }
     }
 
     // Handle case where forwardingTable has never seen this destination before
-    if (forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
+    if (bigTable.table.find(neighborID) == bigTable.table.end() || forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
+        bigTable.updateRoute(neighborID, neighborID, changeCost, verbose);
         forwardingTable.updateRoute(neighborID, neighborID, changeCost, verbose); 
     }
 
@@ -220,7 +221,7 @@ bool DistanceVector::portExpiredCheck() {
 
         // attempt to replace the expired routes with the next best option
         for (router_id dest : removedDest) {
-            ForwardingEntry bestRoute = bigTable.getBestRoute(dest);
+            RouteInfo bestRoute = bigTable.getBestRoute(dest);
             if (bestRoute.routeCost != 0) {
                 forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
             }
