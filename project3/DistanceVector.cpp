@@ -105,21 +105,31 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
             updateRequired = true;
         }
+    }
 
-        // case: a neighbor A's link to another neighbor B of theirs is down, so the update isn't going to contain an entry to B anymore
-        // if we receive this, we check if the old route to B was through A and update the big table accordingly
+    // case: a neighbor A's link to another neighbor B of theirs is down, so the update isn't going to contain an entry to B anymore
+    // if we receive this, we check if the old route to B was through A and update the big table accordingly
+    for (auto& pair : bigTable.table) {
+        router_id destID = pair.first;
+        if (destID == neighborID) {
+            continue;
+        }
 
-        else if (forwardingTable.getRoute(dest).nextHop == neighborID && !dvPayload.hasRoute(dest))
-        {
-            forwardingTable.removeRoute(dest);
-            bigTable.removeRoute(dest, neighborID); // big table should remove all routes that depend on this neighbor as the nextHop
-            // search for the next best option in the big table and repleace the route in the forwarding table
-            RouteInfo bestRoute = bigTable.getBestRoute(dest);
-            if (bestRoute.routeCost != USHRT_MAX-1)
-            {
-                forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
+        // Check if the neighbor exists as a nextHop for this destination
+        if (bigTable.table[destID].count(neighborID) > 0) {
+            // If the neighbor does exist, make sure the payload DV has a path to destination, if it doesn't then we need to update this path
+            if (dvPayload.table.count(destID) == 0) {
+                bigTable.removeRoute(destID, neighborID);
+                RouteInfo bestRoute = bigTable.getBestRoute(destID);
+                if (bestRoute.routeCost != USHRT_MAX - 1) { // if a next best route exists, update the forwarding table
+                    forwardingTable.updateRoute(destID, bestRoute.nextHop, bestRoute.routeCost, verbose);
+                } else { // if no next best route exists, remove the destination from the forwarding table
+                    cout << "about to remove route to " << destID << "so printing table" << endl;
+                    forwardingTable.printTable();
+                    forwardingTable.removeRoute(destID);
+                }
+                updateRequired = true;
             }
-            updateRequired = true;
         }
     }
 
