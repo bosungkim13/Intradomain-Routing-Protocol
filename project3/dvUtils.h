@@ -47,29 +47,7 @@ struct DVForwardingTable
     // Remove a route for a given destination
     void removeRoute(router_id destination);
 
-    void removeRouteModded(router_id destination);
-
-    // Check if a route exists for a destination
-    bool hasRoute(router_id destination) const;
-
-    void printTable();
-};
-
-struct DVBigTable
-{
-    unordered_map<router_id, unordered_map<router_id, DVRouteInfo>> table;
-
-    // Add or update a route for a destination
-    void updateRoute(router_id destination, router_id nextHop, cost routeCost, bool verb = false);
-
-    // Get the route for a given destination, if it exists
-    ForwardingEntry getRoute(router_id destination) const;
-
-    // Remove a route for a given destination
-    void removeRoute(router_id destination);
-
-    // Removes the route and all routes that depend on this destination as the nextHop
-    void removeRouteModded(router_id destination);
+    unordered_set<router_id> removeRoutesWithNextHop(router_id nextHop);
 
     // Check if a route exists for a destination
     bool hasRoute(router_id destination) const;
@@ -78,7 +56,6 @@ struct DVBigTable
 };
 
 DVForwardingTable deserializeDVPayload(Packet packet, Node * n);
-
 
 struct DVBigTable {
     unordered_map<router_id, unordered_map<router_id, DVRouteInfo>> table;
@@ -96,7 +73,7 @@ struct DVBigTable {
     void removeRoute(router_id destination);
 
     // Remove routes that depend on a given next hop
-    void removeRouteModded(router_id nextHop);
+    void removeRoutesWithNextHop(router_id nextHop);
 
     // Check if a route exists for a destination
     bool hasRoute(router_id destination) const;

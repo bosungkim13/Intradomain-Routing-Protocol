@@ -97,17 +97,24 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         }
         if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
-            // TODO: add another check to see if the destID is associated with any neighbor in adjacencyList. If so, verify the port is alive.
-            // If the port is dead, don't update the route.
-
-            // if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
-            // {
-            //     if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
-            //     continue;
-            // }
-
-            
+            bigTable.updateRoute(dest, forwardingTable.getRoute(dest).nextHop, forwardingTable.getRoute(dest).routeCost, forwardingTable.getRoute(dest).lastUpdate, verbose);
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
+            updateRequired = true;
+        }
+
+        // case: a neighbor A's link to another neighbor B of theirs is down, so the update isn't going to contain an entry to B anymore
+        // if we receive this, we check if the old route to B was through A and update the big table accordingly
+
+        else if (forwardingTable.getRoute(dest).nextHop == neighborID && !dvPayload.hasRoute(dest))
+        {
+            forwardingTable.removeRoute(dest);
+            bigTable.removeRoute(dest, neighborID); // big table should remove all routes that depend on this neighbor as the nextHop
+            // search for the next best option in the big table and repleace the route in the forwarding table
+            ForwardingEntry bestRoute = bigTable.getBestRoute(dest);
+            if (bestRoute.routeCost != 0)
+            {
+                forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
+            }
             updateRequired = true;
         }
     }
@@ -207,9 +214,18 @@ bool DistanceVector::portExpiredCheck() {
         }
     }
 
-    for (router_id destID : removeSet) {
-        this->forwardingTable.removeRouteModded(destID);
-        (*this->adjacencyList)[destID].timeCost = 0;
+    for (router_id nextHop : removeSet) {
+        unordered_set<router_id> removedDest = this->forwardingTable.removeRoutesWithNextHop(nextHop);
+        this->bigTable.removeRoutesWithNextHop(nextHop);
+
+        // attempt to replace the expired routes with the next best option
+        for (router_id dest : removedDest) {
+            ForwardingEntry bestRoute = bigTable.getBestRoute(dest);
+            if (bestRoute.routeCost != 0) {
+                forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
+            }
+        }
+        (*this->adjacencyList)[nextHop].timeCost = 0;
     }
 
     return removeSet.size() > 0;

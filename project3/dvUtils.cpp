@@ -37,19 +37,20 @@ void DVForwardingTable::removeRoute(router_id destination)
 
 // modded version of remove route, when a link from A to B dies, it removes
 // routes that take B as the next hop 
-void DVForwardingTable::removeRouteModded(router_id destination) {
+unordered_set<router_id> DVForwardingTable::removeRoutesWithNextHop(router_id nextHop) {
     unordered_set<router_id> removeSet;
     for (auto row : table) {
         router_id destID = row.first;
         ForwardingEntry route = row.second;
-        if (route.nextHop == destination) {
+        if (route.nextHop == nextHop) {
             removeSet.insert(destID);
         }
     }
     for (router_id destID : removeSet) {
         table.erase(destID);
-        cout << "Removing route to " << destID << " as it was routed through the dead link to " << destination << endl;
+        if (verbose) cout << "Removing route to " << destID << " as it was routed through the dead link to " << nextHop << endl;
     }
+    return removeSet;
 }
 
 
@@ -148,7 +149,7 @@ struct DVBigTable {
     }
 
     // Remove routes that rely on a specific next hop
-    void removeRouteModded(router_id destination) {
+    void removeRoutesWithNextHop(router_id destination) {
         unordered_set<router_id> toRemove;
         for (auto &entry : table) {
             auto &nextHops = entry.second;
