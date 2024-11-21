@@ -1,10 +1,20 @@
-(TODO: delete this line) "You should include a test.txt file with your project submission to explain your testing strategy
-and the test cases that you have developed"
-
 Description of our testing strategy:
 
-1. ...
+As the provided tests are extremely trivial, we found it necessary to implement tests of varying size, connection complexity, latencies, and behaviors,
+such as links dying repeatedly and coming back up as well as changes in link delay. The point of these test cases is to test whether our routing protocols
+can find a new cheapest path in the event that a link in the current cheapest path dies or if the routing protocol can find a better path if the delay
+changes between any links. Below are some specific scenarios that our test cases cover
 
-2. ...
+With both DV and LS:
 
-...
+1. A simple network of 3 connected nodes. Can the protocol find a new path after a link in the best path dies (going through the other neighbor)?
+If that link comes back up, can it recover that path, assuming it is still the cheapest? If a link's delay gets cheaper along the way, can the 
+protocol pick up on that and take that path, even if the current best path is still valid?
+
+2. Complex networks with high connectivity between each and every node. Stress tests alternative path finding
+
+3. Various probabilities of packet drop. Can the information be communicated eventually, even if some information packets get lost?
+
+4. Cases of rapid topology and rate changes
+
+Our tests included many different permutations of these conditions to stress test. 
