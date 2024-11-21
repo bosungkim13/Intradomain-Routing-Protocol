@@ -5,6 +5,7 @@
 #include "Node.h"
 #include "LinkState.h"
 #include "DistanceVector.h"
+#include <cstring>
 
 class RoutingProtocolImpl : public RoutingProtocol {
   public:

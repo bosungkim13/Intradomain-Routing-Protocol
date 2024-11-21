@@ -5,7 +5,7 @@
 #include "sharedUtils.h"
 #include <unordered_map>
 #include <unordered_set>
-#include <limits>
+#include <climits>
 #include <stdlib.h>
 #include <cassert>
 #include <arpa/inet.h>

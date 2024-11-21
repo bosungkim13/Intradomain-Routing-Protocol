@@ -2,6 +2,8 @@
 #define SHAREDUTILS_H
 #include "global.h"
 #include "Node.h"
+#include <cstring>
+#include <arpa/inet.h>
 
 #define MAX_PACKET_SIZE 65535 // 2^16 - 1
 #define HEADER_SIZE sizeof(PacketHeader)
