@@ -189,11 +189,6 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
         updateRequired = true;
     }
 
-    // handle case where bigTable's destination has never seen this nextHop before
-    if (bigTable.table[neighborID].count(neighborID) == 0) {
-        // bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
-    }
-
     // Iterate through every destination in the bigTable
     for (auto& pair : bigTable.table) { 
         router_id destination = pair.first;
