@@ -7,7 +7,7 @@
 #define HEADER_SIZE sizeof(PacketHeader)
 #define MAX_PAYLOAD_SIZE MAX_PACKET_SIZE - HEADER_SIZE
 
-#define verbose 1
+#define verbose 0
 
 // Type aliases for convenience
 typedef unsigned short port_num;
