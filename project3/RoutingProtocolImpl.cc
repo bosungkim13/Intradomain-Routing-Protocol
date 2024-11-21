@@ -237,7 +237,7 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     int changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
     // send updates to all neighbors
-    this->myDV.sendUpdates();
+    // this->myDV.sendUpdates(); // Commented out because we only need to sendUpdates when forwarding table changes (and handleCostChange() handles this!)
   } else if (protocolType == P_LS) {
     // preserving the behavior 
     bool topologyChanged = false;

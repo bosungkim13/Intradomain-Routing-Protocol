@@ -172,22 +172,37 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     }
     router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
+    // Always update bigTable with new link cost
+    cost updatedLinkCost = bigTable.table[neighborID][neighborID] + changeCost;
+    bigTable.updateRoute(neighborID, neighborID, updatedLinkCost, verbose); 
+    RouteInfo bestRoute = bigTable.getBestRoute(neighborID);
+    if (bestRoute.nextHop == neighborID) {
+        // Update the forwarding table
+        forwardingTable.updateRoute(neighborID, neighborID, updatedLinkCost, verbose);
+        updateRequired = true;
+    }
+
     // Handle case where forwardingTable has never seen this destination before
     if (forwardingTable.table.count(neighborID) == 0) {
         forwardingTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
-        bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        // bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
         updateRequired = true;
     }
 
     // handle case where bigTable's destination has never seen this nextHop before
     if (bigTable.table[neighborID].count(neighborID) == 0) {
-        bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        // bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
     }
 
     // Iterate through every destination in the bigTable
     for (auto& pair : bigTable.table) { 
         router_id destination = pair.first;
         unordered_map<router_id, cost>& nextHops = pair.second;
+
+        if (destination == neighborID) { // skip because we added changecost to this path immediately
+            continue;
+        }
+
         // Check if the nextHop exists for this destination
         auto hopIterator = nextHops.find(neighborID);
         if (hopIterator != nextHops.end()) {
@@ -211,7 +226,7 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     }
 
     if (updateRequired) {
-        sendUpdates();
+        sendUpdates(); // Commented out because we are ALWAYS sending updates from RoutingProtocolImpl.cc
     }
 }
 
