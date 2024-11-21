@@ -64,8 +64,7 @@ void DistanceVector::sendUpdates()
 }
 
 // THIS IS JUST THE "RECEIVING AN UPDATE" CASE.
-void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
-{
+void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
     // TODO: PingPong phase needs to provide context for the initial DVs for each node.
     // The PingPong phase should also populate the initial forwarding tables for each node.
 
@@ -73,14 +72,15 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
+    cout << "Handling DV packet from neighbor " << dvPacket.header.sourceID << endl;
     int neighborID = dvPacket.header.sourceID;
     DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
 
     // print received forwarding table
     if (verbose) {
-        cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
+        cout << "DV Payload received by Router ID " << this->myRouterID << " from neighbor " << neighborID << ". Table contents:" << endl;
         dvPayload.printTable();
-        cout << "BIG TABLE received by Router ID " << this->myRouterID << ". Table contents:" << endl;
+        cout << "Router ID " << this->myRouterID << " Big Table contents:" << endl;
         bigTable.printTable();
     }
 
@@ -99,11 +99,17 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         }
 
         // always update DV big table (unless it's poison reverse?)
-        bigTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose); 
-        if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
-        {
-            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
-            updateRequired = true;
+        if (nbrToDestRoute.routeCost == USHRT_MAX) {
+            // set the route back to USHRT_MAX
+            bigTable.updateRoute(dest, neighborID, USHRT_MAX, verbose);
+        }
+        else {
+            bigTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose); 
+            if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
+            {
+                forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
+                updateRequired = true;
+            }
         }
     }
 
@@ -124,7 +130,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
                 if (bestRoute.routeCost != USHRT_MAX - 1) { // if a next best route exists, update the forwarding table
                     forwardingTable.updateRoute(destID, bestRoute.nextHop, bestRoute.routeCost, verbose);
                 } else { // if no next best route exists, remove the destination from the forwarding table
-                    cout << "about to remove route to " << destID << "so printing table" << endl;
+                    cout << "about to remove route to " << destID << " so printing table" << endl;
                     forwardingTable.printTable();
                     forwardingTable.removeRoute(destID);
                 }
