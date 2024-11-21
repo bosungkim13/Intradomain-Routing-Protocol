@@ -1,20 +1,72 @@
-Description of our testing strategy:
+# Testing Strategy for Routing Protocols (DV and LS)
 
-As the provided tests are extremely trivial, we found it necessary to implement tests of varying size, connection complexity, latencies, and behaviors,
-such as links dying repeatedly and coming back up as well as changes in link delay. The point of these test cases is to test whether our routing protocols
-can find a new cheapest path in the event that a link in the current cheapest path dies or if the routing protocol can find a better path if the delay
-changes between any links. Below are some specific scenarios that our test cases cover
+To ensure the robustness and efficiency of our routing protocols, we implemented a diverse set of test cases covering a wide range of network scenarios. These tests vary in size, connectivity, latency, and behavior, simulating real-world conditions that challenge the adaptability and reliability of both Distance Vector (DV) and Link State (LS) protocols. The goal is to evaluate how well the protocols can find the optimal path under changing conditions, recover from failures, and handle dynamic network environments.
 
-With both DV and LS:
+## Core Scenarios for Both DV and LS Protocols
 
-1. A simple network of 3 connected nodes. Can the protocol find a new path after a link in the best path dies (going through the other neighbor)?
-If that link comes back up, can it recover that path, assuming it is still the cheapest? If a link's delay gets cheaper along the way, can the 
-protocol pick up on that and take that path, even if the current best path is still valid?
+### 1. Small Network Behavior
+- Simple 3-node network:
+  - If the link in the current optimal path fails, can the protocol dynamically find and switch to an alternative path through another neighbor?
+  - When the failed link is restored, can the protocol recover and revert to the original path if it remains the cheapest?
+  - If the delay of a link decreases (making it cheaper), does the protocol correctly update its routing table to take the new optimal path, even when the previous path remains valid?
 
-2. Complex networks with high connectivity between each and every node. Stress tests alternative path finding
+### 2. High-Connectivity Networks
+- Complex, fully connected topologies:
+  - Test the scalability and efficiency of path computation in dense networks with numerous alternative routes.
+  - Stress test the protocol's ability to quickly identify the best path amid a high number of connections, especially when multiple links change simultaneously.
 
-3. Various probabilities of packet drop. Can the information be communicated eventually, even if some information packets get lost?
+### 3. Packet Loss Resilience
+- Handling unreliable communication:
+  - Introduce packet drop scenarios with varying probabilities. Can the protocol reliably communicate necessary information and eventually converge, even with partial data loss?
 
-4. Cases of rapid topology and rate changes
+### 4. Dynamic Topology Changes
+- Rapid network changes:
+  - Simulate links failing and recovering in quick succession, mimicking unstable network environments.
+  - Test the protocol's ability to adapt to frequent and unpredictable changes in link availability or delays.
 
-Our tests included many different permutations of these conditions to stress test. 
+### 5. Rate Fluctuations and Delay Variability
+- Introduce realistic rate fluctuations in data transmission and dynamic link delays.
+- Assess whether the protocol can continuously adjust to these variations and maintain the optimal path.
+
+---
+
+## Additional Scenarios to Enhance Testing
+
+### 6. Partitioned Networks
+- Temporary network segmentation:
+  - Simulate network partitions where nodes or groups of nodes become isolated. Can the protocol recover and resume optimal routing once the partition is resolved?
+
+### 7. Non-Symmetric Links
+- Asymmetric delays or costs:
+  - Test networks with links where the cost or delay of traveling in one direction differs from the reverse direction. Can the protocol properly compute routes accounting for these asymmetries?
+
+### 8. Scalability and Convergence Testing
+- Large-scale networks:
+  - Evaluate how the protocol handles increasing network size, up to hundreds or thousands of nodes, focusing on convergence time and memory overhead.
+- Measure the trade-offs between convergence speed and routing accuracy in large networks.
+
+### 9. Delayed Information Propagation
+- Introduce intentional delays in propagating routing updates to specific nodes.
+- Assess whether the protocol remains consistent and eventually converges to the correct routing tables across the network.
+
+### 10. Load-Balanced Routing
+- Simulate scenarios where multiple paths have identical costs. Does the protocol correctly load-balance traffic across equivalent paths, if supported?
+
+### 11. Malicious or Faulty Nodes
+- Incorrect routing information:
+  - Introduce nodes that deliberately send incorrect routing information (e.g., advertising a falsely low cost to a destination).
+  - Assess the protocol’s resilience to such attacks or faults and its ability to mitigate the impact.
+
+---
+
+## Test Metrics and Evaluation
+
+To comprehensively evaluate the performance of the routing protocols under these scenarios, we use the following metrics:
+
+- Convergence time: How quickly the protocol updates to reflect changes in the network.
+- Correctness: Whether the protocol consistently finds the optimal path after changes.
+- Overhead: The volume of control messages exchanged during convergence.
+- Stability: The protocol’s behavior in rapidly fluctuating conditions, avoiding routing loops or oscillations.
+- Resilience: The protocol’s ability to recover from failures, packet loss, or malicious inputs.
+
+By combining these scenarios and metrics, our testing strategy ensures a thorough evaluation of both DV and LS protocols in diverse, challenging environments. This comprehensive approach helps uncover edge cases and potential weaknesses, ensuring robust performance in real-world applications.
