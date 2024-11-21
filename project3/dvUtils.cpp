@@ -121,7 +121,7 @@ RouteInfo DVBigTable::getBestRoute(router_id destination) const
     if (destIt == table.end() || destIt->second.empty())
     {
         // If the destination doesn't exist or has no valid routes, return a default DVRoute
-        return RouteInfo(0, USHRT_MAX); // Infinite cost indicates no valid route
+        return RouteInfo(0, USHRT_MAX-1); // Infinite cost indicates no valid route
     }
 
     const auto &nextHops = destIt->second;

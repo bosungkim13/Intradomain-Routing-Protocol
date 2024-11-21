@@ -80,6 +80,8 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
     if (verbose) {
         cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
         dvPayload.printTable();
+        cout << "BIG TABLE received by Router ID " << this->myRouterID << ". Table contents:" << endl;
+        bigTable.printTable();
     }
 
     // bellman-ford algorithm
@@ -95,9 +97,11 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         {
             continue;
         }
+
+        // always update DV big table (unless it's poison reverse?)
+        bigTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose); 
         if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
         {
-            bigTable.updateRoute(dest, forwardingTable.getRoute(dest).nextHop, forwardingTable.getRoute(dest).routeCost, verbose);
             forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
             updateRequired = true;
         }
@@ -111,7 +115,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
             bigTable.removeRoute(dest, neighborID); // big table should remove all routes that depend on this neighbor as the nextHop
             // search for the next best option in the big table and repleace the route in the forwarding table
             RouteInfo bestRoute = bigTable.getBestRoute(dest);
-            if (bestRoute.routeCost != 0)
+            if (bestRoute.routeCost != USHRT_MAX-1)
             {
                 forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
             }
@@ -139,6 +143,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 //  those have been updated in RoutingProtocolImpl.cc before delegating to this
 void DistanceVector::handleCostChange(port_num port, int changeCost)
 {
+    bool updateRequired = false;
     if (verbose) {
         cout << "Cost change detected for neighbor " << (*portStatus)[port].destRouterID << " on port " << port << endl;
         cout << "current cost: " << (*portStatus)[port].timeCost << ", change: " << changeCost << endl;
@@ -163,6 +168,7 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
             if (bestRoute.nextHop == neighborID) {
                 // Update the forwarding table
                 forwardingTable.updateRoute(destination, neighborID, updatedCost, verbose);
+                updateRequired = true;
             }
         }
     }
@@ -171,11 +177,16 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     if (bigTable.table.find(neighborID) == bigTable.table.end() || forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
         bigTable.updateRoute(neighborID, neighborID, changeCost, verbose);
         forwardingTable.updateRoute(neighborID, neighborID, changeCost, verbose); 
+        updateRequired = true;
     }
 
     if (verbose) {
         cout << "New table for Router ID: " << this->myRouterID << endl;
         forwardingTable.printTable();
+    }
+
+    if (updateRequired) {
+        sendUpdates();
     }
 }
 
@@ -222,7 +233,7 @@ bool DistanceVector::portExpiredCheck() {
         // attempt to replace the expired routes with the next best option
         for (router_id dest : removedDest) {
             RouteInfo bestRoute = bigTable.getBestRoute(dest);
-            if (bestRoute.routeCost != 0) {
+            if (bestRoute.routeCost != USHRT_MAX-1) {
                 forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
             }
         }
