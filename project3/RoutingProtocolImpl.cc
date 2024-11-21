@@ -237,7 +237,7 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
     int changeCost = adjacencyList[pongPacket.header.sourceID].timeCost - oldTimeCost;
     this->myDV.handleCostChange(port, changeCost);
     // send updates to all neighbors
-    this->myDV.sendUpdates();
+    // this->myDV.sendUpdates(); // Commented out because we only need to sendUpdates when forwarding table changes (and handleCostChange() handles this!)
   } else if (protocolType == P_LS) {
     // preserving the behavior 
     bool topologyChanged = false;
@@ -248,7 +248,6 @@ void RoutingProtocolImpl::handlePongs(unsigned short port, Packet pongPacket) {
       cost oldTimeCost = this->adjacencyList[destID].timeCost;
       this->adjacencyList[destID].timeCost = rtt;
 
-      // TODO: change this to a range so we dont update for every single minimal change
       rttChanged = oldTimeCost != this->adjacencyList[destID].timeCost;
     } else {
       // Update the forwarding table? Should always be the same as
@@ -285,7 +284,7 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   }
 
   if (destId == this->routerID) {
-    std::cout << "handleData(): destId == this->routerID." << std::endl;
+    if (verbose) std::cout << "handleData(): destId == this->routerID." << std::endl;
     delete[] static_cast<char*>(handleMe);
     return;
   }

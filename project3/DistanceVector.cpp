@@ -1,4 +1,5 @@
 #include "DistanceVector.h"
+#include "sharedUtils.h"
 #include <climits>
 #include <unordered_set>
 
@@ -63,8 +64,7 @@ void DistanceVector::sendUpdates()
 }
 
 // THIS IS JUST THE "RECEIVING AN UPDATE" CASE.
-void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
-{
+void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
     // TODO: PingPong phase needs to provide context for the initial DVs for each node.
     // The PingPong phase should also populate the initial forwarding tables for each node.
 
@@ -72,13 +72,16 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
+    if (verbose) cout << "Handling DV packet from neighbor " << dvPacket.header.sourceID << endl;
     int neighborID = dvPacket.header.sourceID;
     DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
 
     // print received forwarding table
     if (verbose) {
-        cout << "DV Payload received by Router ID " << this->myRouterID << ". Table contents:" << endl;
+        cout << "DV Payload received by Router ID " << this->myRouterID << " from neighbor " << neighborID << ". Table contents:" << endl;
         dvPayload.printTable();
+        cout << "Router ID " << this->myRouterID << " Big Table contents:" << endl;
+        bigTable.printTable();
     }
 
     // bellman-ford algorithm
@@ -94,18 +97,48 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
         {
             continue;
         }
-        if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
-        {
-            // TODO: add another check to see if the destID is associated with any neighbor in adjacencyList. If so, verify the port is alive.
-            // If the port is dead, don't update the route.
 
-            if ((*adjacencyList).find(dest) != (*adjacencyList).end() && !(*portStatus)[(*adjacencyList)[dest].port].isUp)
-            {
-                if (verbose) cout << "Port to neighbor " << dest << " is down. Not updating route to " << dest << endl;
-                continue;
+        // always update DV big table
+        RouteInfo bestRoute = bigTable.getBestRoute(dest); 
+        if (nbrToDestRoute.routeCost == USHRT_MAX) {
+            // set the route back to USHRT_MAX
+            if (bestRoute.routeCost == 0) {
+                 bigTable.updateRoute(dest, neighborID, USHRT_MAX, verbose);
             }
-            forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
-            updateRequired = true;
+        }
+        else {
+            bigTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose); 
+            if ((*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost < forwardingTable.getRoute(dest).routeCost)
+            {
+                forwardingTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose);
+                updateRequired = true;
+            }
+        }
+    }
+
+    // case: a neighbor A's link to another neighbor B of theirs is down, so the update isn't going to contain an entry to B anymore
+    // if we receive this, we check if the old route to B was through A and update the big table accordingly
+    for (auto& pair : bigTable.table) {
+        router_id destID = pair.first;
+        if (destID == neighborID) { // DV payload coming from a neighbor won't contain a path to itself
+            continue;
+        }
+
+        // Check if the neighbor exists as a nextHop for this destination
+        if (bigTable.table[destID].count(neighborID) > 0) {
+            // If the neighbor does exist, make sure the payload DV has a path to destination, if it doesn't then we need to update this path
+            if (dvPayload.table.count(destID) == 0) {
+                bigTable.removeRoute(destID, neighborID);
+                RouteInfo bestRoute = bigTable.getBestRoute(destID);
+                if (bestRoute.routeCost != USHRT_MAX - 1) { // if a next best route exists, update the forwarding table
+                    forwardingTable.updateRoute(destID, bestRoute.nextHop, bestRoute.routeCost, verbose);
+                } else { // if no next best route exists, remove the destination from the forwarding table
+                    if (verbose) cout << "about to remove route to " << destID << " so printing table" << endl;
+                    forwardingTable.printTable();
+                    forwardingTable.removeRoute(destID);
+                }
+                updateRequired = true;
+            }
         }
     }
 
@@ -129,6 +162,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket)
 //  those have been updated in RoutingProtocolImpl.cc before delegating to this
 void DistanceVector::handleCostChange(port_num port, int changeCost)
 {
+    bool updateRequired = false;
     if (verbose) {
         cout << "Cost change detected for neighbor " << (*portStatus)[port].destRouterID << " on port " << port << endl;
         cout << "current cost: " << (*portStatus)[port].timeCost << ", change: " << changeCost << endl;
@@ -138,25 +172,56 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     }
     router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
-    // Update any routing table entries that use this link (uses neighborID as nextHop) with the new cost
-    for (auto row : forwardingTable.table)
-    {
-        auto dest = row.first;
-        auto route = row.second;
-        if (route.nextHop == neighborID)
-        {
-            forwardingTable.updateRoute(dest, neighborID, changeCost + route.routeCost, verbose); 
-        }
+    // Always update bigTable with new link cost
+    cost updatedLinkCost = bigTable.table[neighborID][neighborID] + changeCost;
+    bigTable.updateRoute(neighborID, neighborID, updatedLinkCost, verbose); 
+    RouteInfo bestRoute = bigTable.getBestRoute(neighborID);
+    if (bestRoute.nextHop == neighborID) {
+        // Update the forwarding table
+        forwardingTable.updateRoute(neighborID, neighborID, updatedLinkCost, verbose);
+        updateRequired = true;
     }
 
     // Handle case where forwardingTable has never seen this destination before
-    if (forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
-        forwardingTable.updateRoute(neighborID, neighborID, changeCost, verbose); 
+    if (forwardingTable.table.count(neighborID) == 0) {
+        forwardingTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        // bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        updateRequired = true;
+    }
+
+    // Iterate through every destination in the bigTable
+    for (auto& pair : bigTable.table) { 
+        router_id destination = pair.first;
+        unordered_map<router_id, cost>& nextHops = pair.second;
+
+        if (destination == neighborID) { // skip because we added changecost to this path immediately
+            continue;
+        }
+
+        // Check if the nextHop exists for this destination
+        auto hopIterator = nextHops.find(neighborID);
+        if (hopIterator != nextHops.end()) {
+            // Update the cost for the specified nextHop
+            cost& updatedCost = hopIterator->second;
+            updatedCost += changeCost;
+
+            // Check if this nextHop is now the minimum cost for the destination
+            RouteInfo bestRoute = bigTable.getBestRoute(destination);
+            if (bestRoute.nextHop == neighborID) {
+                // Update the forwarding table
+                forwardingTable.updateRoute(destination, neighborID, updatedCost, verbose);
+                updateRequired = true;
+            }
+        }
     }
 
     if (verbose) {
         cout << "New table for Router ID: " << this->myRouterID << endl;
         forwardingTable.printTable();
+    }
+
+    if (updateRequired) {
+        sendUpdates(); // Commented out because we are ALWAYS sending updates from RoutingProtocolImpl.cc
     }
 }
 
@@ -165,7 +230,7 @@ bool DistanceVector::dvEntryExpiredCheck() {
     unordered_set<router_id> removeSet;
     for (auto row : forwardingTable.table) {
         router_id destID = row.first;
-        DVRoute route = row.second;
+        ForwardingEntry route = row.second;
         time_stamp currTime = sys->time();
         if (currTime - route.lastUpdate > 45 * 1000) {
             removeSet.insert(destID);
@@ -178,7 +243,7 @@ bool DistanceVector::dvEntryExpiredCheck() {
 
     // print destination that expired
     for (router_id destID : removeSet) {
-        cout << "Destination " << destID << " has expired and will be removed." << endl;
+        if (verbose) cout << "Destination " << destID << " has expired and will be removed." << endl;
     }
 
     return removeSet.size() > 0;
@@ -191,13 +256,23 @@ bool DistanceVector::portExpiredCheck() {
         if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;
+            if (verbose) cout << "Port to destination " << it->second.destRouterID << " has expired." << endl;
             removeSet.insert(it->second.destRouterID);
         }
     }
 
-    for (router_id destID : removeSet) {
-        this->forwardingTable.removeRoute(destID);
-        (*this->adjacencyList)[destID].timeCost = 0;
+    for (router_id nextHop : removeSet) {
+        unordered_set<router_id> removedDest = this->forwardingTable.removeRoutesWithNextHop(nextHop);
+        this->bigTable.removeRoutesWithNextHop(nextHop);
+
+        // attempt to replace the expired routes with the next best option
+        for (router_id dest : removedDest) {
+            RouteInfo bestRoute = bigTable.getBestRoute(dest);
+            if (bestRoute.nextHop != 0) {
+                forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
+            }
+        }
+        (*this->adjacencyList)[nextHop].timeCost = 0;
     }
 
     return removeSet.size() > 0;
