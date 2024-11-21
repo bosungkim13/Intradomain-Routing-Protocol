@@ -98,10 +98,13 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
             continue;
         }
 
-        // always update DV big table (unless it's poison reverse?)
+        // always update DV big table
+        RouteInfo bestRoute = bigTable.getBestRoute(dest); 
         if (nbrToDestRoute.routeCost == USHRT_MAX) {
             // set the route back to USHRT_MAX
-            bigTable.updateRoute(dest, neighborID, USHRT_MAX, verbose);
+            if (bestRoute.routeCost == 0) {
+                 bigTable.updateRoute(dest, neighborID, USHRT_MAX, verbose);
+            }
         }
         else {
             bigTable.updateRoute(dest, neighborID, (*adjacencyList)[neighborID].timeCost + nbrToDestRoute.routeCost, verbose); 
@@ -117,7 +120,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
     // if we receive this, we check if the old route to B was through A and update the big table accordingly
     for (auto& pair : bigTable.table) {
         router_id destID = pair.first;
-        if (destID == neighborID) {
+        if (destID == neighborID) { // DV payload coming from a neighbor won't contain a path to itself
             continue;
         }
 
@@ -169,6 +172,19 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
     }
     router_id neighborID = (*portStatus)[port].destRouterID; // Get the neighbor ID from the port
 
+    // Handle case where forwardingTable has never seen this destination before
+    if (forwardingTable.table.count(neighborID) == 0) {
+        forwardingTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+        updateRequired = true;
+    }
+
+    // handle case where bigTable's destination has never seen this nextHop before
+    if (bigTable.table[neighborID].count(neighborID) == 0) {
+        bigTable.updateRoute(neighborID, neighborID, 0, verbose); // initialize cost as 0 because below we will add changecost
+    }
+
+    // Iterate through every destination in the bigTable
     for (auto& pair : bigTable.table) { 
         router_id destination = pair.first;
         unordered_map<router_id, cost>& nextHops = pair.second;
@@ -180,20 +196,13 @@ void DistanceVector::handleCostChange(port_num port, int changeCost)
             updatedCost += changeCost;
 
             // Check if this nextHop is now the minimum cost for the destination
-            RouteInfo bestRoute =  bigTable.getBestRoute(destination);
+            RouteInfo bestRoute = bigTable.getBestRoute(destination);
             if (bestRoute.nextHop == neighborID) {
                 // Update the forwarding table
                 forwardingTable.updateRoute(destination, neighborID, updatedCost, verbose);
                 updateRequired = true;
             }
         }
-    }
-
-    // Handle case where forwardingTable has never seen this destination before
-    if (bigTable.table.find(neighborID) == bigTable.table.end() || forwardingTable.table.find(neighborID) == forwardingTable.table.end()) {
-        bigTable.updateRoute(neighborID, neighborID, changeCost, verbose);
-        forwardingTable.updateRoute(neighborID, neighborID, changeCost, verbose); 
-        updateRequired = true;
     }
 
     if (verbose) {
@@ -249,7 +258,7 @@ bool DistanceVector::portExpiredCheck() {
         // attempt to replace the expired routes with the next best option
         for (router_id dest : removedDest) {
             RouteInfo bestRoute = bigTable.getBestRoute(dest);
-            if (bestRoute.routeCost != USHRT_MAX-1) {
+            if (bestRoute.nextHop != 0) {
                 forwardingTable.updateRoute(dest, bestRoute.nextHop, bestRoute.routeCost, verbose);
             }
         }

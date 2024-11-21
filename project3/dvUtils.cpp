@@ -121,9 +121,10 @@ RouteInfo DVBigTable::getBestRoute(router_id destination) const
     if (destIt == table.end() || destIt->second.empty())
     {
         // If the destination doesn't exist or has no valid routes, return a default DVRoute
-        return RouteInfo(0, USHRT_MAX-1); // Infinite cost indicates no valid route
+        return RouteInfo(0, USHRT_MAX-1); // Infinite cost or nextHop == 0 indicates no valid route (NOTE: assuming that 0 as node is invalid)
     }
 
+    cout << "destination " << destination << " was found in the big table" << endl;
     const auto &nextHops = destIt->second;
     router_id bestNextHop = 0;
     cost lowestCost = USHRT_MAX;
@@ -179,6 +180,7 @@ void DVBigTable::removeRoute(router_id destination, router_id nextHop)
 // Remove routes that depend on this nextHop
 void DVBigTable::removeRoutesWithNextHop(router_id nextHop)
 {
+    // Iterate through every possible destination
     for (auto destIt = table.begin(); destIt != table.end();)
     {
         auto &nextHops = destIt->second;
