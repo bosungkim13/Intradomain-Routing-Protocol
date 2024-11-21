@@ -229,5 +229,5 @@ void DVBigTable::printTable() const
             vt.addRow(row.first, hop.first, hop.second);
         }
     }
-    if (verbose) vt.print(cout);
+    vt.print(cout);
 }
