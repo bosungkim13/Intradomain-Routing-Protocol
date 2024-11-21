@@ -34,7 +34,7 @@ ForwardingEntry DVForwardingTable::getRoute(router_id destination) const
 void DVForwardingTable::removeRoute(router_id destination)
 {
     // print for debug
-    cout << "Removing route to " << destination << endl;
+    if (verbose) cout << "Removing route to " << destination << endl;
     table.erase(destination);
 }
 
@@ -56,7 +56,7 @@ unordered_set<router_id> DVForwardingTable::removeRoutesWithNextHop(router_id ne
     {
         table.erase(destID);
         if (verbose)
-            cout << "Removing route to " << destID << " as it was routed through the dead link to " << nextHop << endl;
+            if (verbose) cout << "Removing route to " << destID << " as it was routed through the dead link to " << nextHop << endl;
     }
     return removeSet;
 }
@@ -124,7 +124,7 @@ RouteInfo DVBigTable::getBestRoute(router_id destination) const
         return RouteInfo(0, USHRT_MAX-1); // Infinite cost or nextHop == 0 indicates no valid route (NOTE: assuming that 0 as node is invalid)
     }
 
-    cout << "destination " << destination << " was found in the big table" << endl;
+    if (verbose) cout << "destination " << destination << " was found in the big table" << endl;
     const auto &nextHops = destIt->second;
     router_id bestNextHop = 0;
     cost lowestCost = USHRT_MAX;
@@ -156,24 +156,24 @@ void DVBigTable::removeRoute(router_id destination, router_id nextHop)
         if (nextHopIt != nextHops.end())
         {
             nextHops.erase(nextHopIt); // Erase the next hop
-            std::cout << "Route to destination " << destination
+            if (verbose) std::cout << "Route to destination " << destination
                       << " via next hop " << nextHop << " removed.\n";
             if (nextHops.empty())
             {
                 table.erase(destIt); // Remove destination if no next hops remain
-                std::cout << "Destination " << destination << " removed due to no remaining routes.\n";
+                if (verbose) std::cout << "Destination " << destination << " removed due to no remaining routes.\n";
             }
             return; // Since nextHop is unique, we can exit after removal
         }
         else
         {
-            std::cout << "No route via next hop " << nextHop
+            if (verbose) std::cout << "No route via next hop " << nextHop
                       << " for destination " << destination << ".\n";
         }
     }
     else
     {
-        std::cout << "Destination " << destination << " not found in the table.\n";
+        if (verbose) std::cout << "Destination " << destination << " not found in the table.\n";
     }
 }
 
@@ -188,14 +188,14 @@ void DVBigTable::removeRoutesWithNextHop(router_id nextHop)
         if (nextHopIt != nextHops.end())
         {
             // Erase the route for this next hop
-            std::cout << "Removing route to destination " << destIt->first
+            if (verbose) std::cout << "Removing route to destination " << destIt->first
                       << " via next hop " << nextHop << ".\n";
             nextHops.erase(nextHopIt);
 
             // If no more next hops exist for this destination, erase the destination
             if (nextHops.empty())
             {
-                std::cout << "Removing destination " << destIt->first
+                if (verbose) std::cout << "Removing destination " << destIt->first
                           << " as it has no remaining routes.\n";
                 destIt = table.erase(destIt); // Erase destination and move to next
             }
@@ -229,5 +229,5 @@ void DVBigTable::printTable() const
             vt.addRow(row.first, hop.first, hop.second);
         }
     }
-    vt.print(cout);
+    if (verbose) vt.print(cout);
 }

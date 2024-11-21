@@ -72,7 +72,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
 
     // unpack the payload into a DVTable struct
     // DVPacketPayload dvPayload = deserializeDVPayload(dvPacket.payload);
-    cout << "Handling DV packet from neighbor " << dvPacket.header.sourceID << endl;
+    if (verbose) cout << "Handling DV packet from neighbor " << dvPacket.header.sourceID << endl;
     int neighborID = dvPacket.header.sourceID;
     DVForwardingTable dvPayload = deserializeDVPayload(dvPacket, this->sys);
 
@@ -133,7 +133,7 @@ void DistanceVector::handleDVPacket(port_num port, Packet dvPacket) {
                 if (bestRoute.routeCost != USHRT_MAX - 1) { // if a next best route exists, update the forwarding table
                     forwardingTable.updateRoute(destID, bestRoute.nextHop, bestRoute.routeCost, verbose);
                 } else { // if no next best route exists, remove the destination from the forwarding table
-                    cout << "about to remove route to " << destID << " so printing table" << endl;
+                    if (verbose) cout << "about to remove route to " << destID << " so printing table" << endl;
                     forwardingTable.printTable();
                     forwardingTable.removeRoute(destID);
                 }
@@ -243,7 +243,7 @@ bool DistanceVector::dvEntryExpiredCheck() {
 
     // print destination that expired
     for (router_id destID : removeSet) {
-        cout << "Destination " << destID << " has expired and will be removed." << endl;
+        if (verbose) cout << "Destination " << destID << " has expired and will be removed." << endl;
     }
 
     return removeSet.size() > 0;
@@ -256,7 +256,7 @@ bool DistanceVector::portExpiredCheck() {
         if (this->sys->time() - it->second.lastUpdate > 15 * 1000) {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;
-            cout << "Port to destination " << it->second.destRouterID << " has expired." << endl;
+            if (verbose) cout << "Port to destination " << it->second.destRouterID << " has expired." << endl;
             removeSet.insert(it->second.destRouterID);
         }
     }
