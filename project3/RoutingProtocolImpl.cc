@@ -277,7 +277,6 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   }
 
   if (destId == this->routerID) {
-    std::cout << "Reached destination data" << std::endl;
     if (verbose) std::cout << "handleData(): destId == this->routerID." << std::endl;
     delete[] static_cast<char*>(handleMe);
     return;
