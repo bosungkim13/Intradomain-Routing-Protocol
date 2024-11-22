@@ -14,8 +14,6 @@ void* serializePacket(Packet serializeMe) {
     if (buffer == nullptr) {
         return nullptr; // Check for allocation failure
     }
-    if (verbose) std::cout << "serializePacket successfully malloc'd mySize = " << mySize << " bytes" << std::endl; // debug code
-
 
     memcpy(buffer, &header, HEADER_SIZE);
     if (verbose) std::cout << "serializePacket successfully memcpy'd header with HEADER_SIZE = " << HEADER_SIZE << " bytes" << std::endl; // debug code
@@ -25,7 +23,7 @@ void* serializePacket(Packet serializeMe) {
     int offset = HEADER_SIZE;
     if (header.packetType == LS) {
         // For LS packet, first 4 bytes are seqNum
-        unsigned int seqNum = serializeMe.payload[offset - HEADER_SIZE];
+        unsigned int seqNum = *((unsigned int*)&serializeMe.payload[offset - HEADER_SIZE]);
         seqNum = htonl(seqNum);
         memcpy((char*)buffer + offset, &seqNum, sizeof(seq_num));
         // For the rest of the payload, it alternates between neighbor ID and cost
@@ -65,7 +63,6 @@ void* serializePacket(Packet serializeMe) {
     } else if (header.packetType == PONG || header.packetType == PING) {
         // For PING and PONG packets, the payload is the timestamp
         time_stamp timestamp = *(time_stamp*)serializeMe.payload;
-        // cout << "serializePacket(): timestamp = " << timestamp << endl;
         timestamp = htonl(timestamp);
         memcpy((char*)buffer + offset, &timestamp, sizeof(timestamp));
     } else if (header.packetType == DATA) {
