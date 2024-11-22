@@ -277,6 +277,7 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
   }
 
   if (destId == this->routerID) {
+    std::cout << "Reached destination data" << std::endl;
     if (verbose) std::cout << "handleData(): destId == this->routerID." << std::endl;
     delete[] static_cast<char*>(handleMe);
     return;
@@ -287,7 +288,6 @@ void RoutingProtocolImpl::handleData(unsigned short port, void* handleMe) {
     if (this->forwardingTable.find(destId) != this->forwardingTable.end()) {
       // If the destination is in the forwarding table, send the packet to the next hop
       router_id nextHopRouterID = this->forwardingTable[destId];      
-      this->myLSRP.printTables();
       sys->send(this->adjacencyList[nextHopRouterID].port, handleMe, dataPacket.header.size);
     }
   } else if (this->protocolType == P_DV) { 

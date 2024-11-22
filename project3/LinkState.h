@@ -85,14 +85,12 @@ class LinkState {
 
             // Remove all incoming edges to downNode
             auto it = this->costTable.begin();
-            bool foundOtherDownNode = false;
             while (it != this->costTable.end()) {
                 auto& neighbors = it->second;
                 auto neighborIt = neighbors.find(downNode);
 
                 if (neighborIt != neighbors.end()) {
                     neighbors.erase(neighborIt); // Remove reference to downNode
-                    foundOtherDownNode = true;
                 }
                 // advance
                 ++it;
