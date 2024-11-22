@@ -15,4 +15,10 @@ struct ls_path_info {
         : myID(id), lastUpdate(update), timeCost(costValue) {}
 };
 
+struct ls_packet_info {
+    unordered_map<router_id, cost> costTable;
+    router_id sourceId;
+    seq_num seqNum;
+};
+
 #endif

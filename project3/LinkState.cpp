@@ -51,6 +51,7 @@ void LinkState::SendUpdates() {
         void* msg = serializePacket(packet);
         this->sys->send(portId, msg, size);
     }
+    this->seqNum++;
 }
 
 void LinkState::FloodUpdates(port_num myPort, void* floodMe, unsigned short size) {
@@ -58,12 +59,14 @@ void LinkState::FloodUpdates(port_num myPort, void* floodMe, unsigned short size
         if (portId == myPort) {
             continue;
         }
-        char *copy = strdup(static_cast<char *>(floodMe));
+        char* copy = static_cast<char*>(malloc(size));    // Allocate exact size
+        memcpy(copy, floodMe, size);  
         sys->send(portId, copy, size);
     }
     free(floodMe);
 }
 
+// must call checkTableExpired() before calling this function
 void LinkState::UpdateTable() {
     // destination router : <current router ID, cost>
     unordered_map<router_id, std::pair<router_id, cost> > activeDistances;
@@ -71,7 +74,9 @@ void LinkState::UpdateTable() {
     // adjacent routers to current router
     for (auto entry = this->portStatus->begin(); entry != this->portStatus->end(); entry++) {
         PortStatusEntry pEntry = entry->second;
-        if (pEntry.isUp) {
+
+        // TODO: This is likely where we are going wrong with routing. Adjacency list could not be updated
+        if (pEntry.isUp && (*this->adjacencyList).find(pEntry.destRouterID) != (*this->adjacencyList).end()) {
             activeDistances[pEntry.destRouterID] = std::make_pair(this->myRouterID, pEntry.timeCost);
         }
         
@@ -79,21 +84,20 @@ void LinkState::UpdateTable() {
 
     unordered_set<router_id> toVisit;
     // all other routers
-    for (auto entry = costTable.begin(); entry != costTable.end(); entry++) {
+
+    // NOTE: Changed to use nodeTable instead of costTable because costTable is harder to find active routers
+    for (auto entry = nodeTable.begin(); entry != nodeTable.end(); entry++ ) {
         router_id destId = entry->first;
         if (destId != this->myRouterID) {
             toVisit.insert(destId);
             if (activeDistances.find(destId) == activeDistances.end()) {
-                // this destination is not connected to the current router
                 activeDistances[destId] = make_pair(this->myRouterID, INFINITY_COST);
             }
         }
     }
 
-    // DIJKSTRA
     router_id currRouterId;
     cost minCost;
-
     while (!toVisit.empty()) {
         minCost = INFINITY_COST;
         for (auto id: toVisit) {
@@ -109,13 +113,18 @@ void LinkState::UpdateTable() {
         }
         toVisit.erase(currRouterId);
 
+        // Here we can iterate through portStatus to get neighbor ids then query nodeTable to get cost if we dont use costTable
+
         auto currRouterCost = costTable[currRouterId];
         for (auto id: currRouterCost) {
             router_id neighborId = id.first;
-            cost neighborCost = id.second;
-            if (toVisit.find(neighborId) != toVisit.end() && neighborCost + minCost < activeDistances[neighborId].second) {
-                activeDistances[neighborId] = make_pair(currRouterId, neighborCost + minCost);
+            if (neighborId == this->myRouterID) {
+                continue;
             }
+            cost neighborCost = id.second;
+            if (toVisit.find(neighborId) != toVisit.end() && activeDistances.find(neighborId) != activeDistances.end() && neighborCost + minCost < activeDistances[neighborId].second) {
+                activeDistances[neighborId] = make_pair(currRouterId, neighborCost + minCost);
+            } 
         }
 
 
@@ -123,11 +132,10 @@ void LinkState::UpdateTable() {
 
     // Update the forwarding table and all the info in nodeTable
     // Update distances for neighbors
-    ls_path_info pathInfo = nodeTable[currRouterId];
     for (auto distance : activeDistances) {
         router_id destId = distance.first;
         pair<router_id, cost> oldDistance = distance.second;
-        if (distance.first != currRouterId) {
+        if (destId != this->myRouterID) {
             ls_path_info newPathInfo(destId, sys->time(), oldDistance.second);
             nodeTable[destId] = newPathInfo;
             // update forwarding table if cheaper path is found
@@ -142,12 +150,13 @@ router_id LinkState::FindNextHop(unordered_map<router_id, std::pair<router_id, c
     while (activeDistances[currDest].first != this->myRouterID) {
         currDest = activeDistances[currDest].first;
     }
+
     return currDest;
 }
 
-unordered_map<router_id, cost> LinkState::DeserializeLSPacket(void* deserializeMe, router_id &sourceId, seq_num &seqNum) {
+ls_packet_info LinkState::DeserializeLSPacket(void* deserializeMe) {
     Packet packet;
-    unordered_map<router_id, cost> costTable;
+    ls_packet_info info;
     
     // Copy the header back
     memcpy(&packet.header, deserializeMe, sizeof(PacketHeader));
@@ -155,10 +164,11 @@ unordered_map<router_id, cost> LinkState::DeserializeLSPacket(void* deserializeM
     // Convert header fields from network to host byte order
     packet.header.size = ntohs(packet.header.size);
     packet.header.sourceID = ntohs(packet.header.sourceID);
+    info.sourceId = packet.header.sourceID;
 
     // Read the sequence number
-    memcpy(&seqNum, (char*)deserializeMe + sizeof(PacketHeader), sizeof(seq_num));
-    seqNum = ntohs(seqNum); // Convert from network to host byte order
+    memcpy(&info.seqNum, (char*)deserializeMe + sizeof(PacketHeader), sizeof(seq_num));
+    info.seqNum = ntohl(info.seqNum);
 
     // Reader neioghbor id and cost
     int offset = sizeof(PacketHeader) + sizeof(seq_num);
@@ -175,28 +185,28 @@ unordered_map<router_id, cost> LinkState::DeserializeLSPacket(void* deserializeM
         offset += sizeof(cost);
 
         // Store the neighbor ID and cost in the costTable
-        costTable[neighborID] = neighborCost;
+        info.costTable[neighborID] = neighborCost;
     }
-    
-    return costTable;
+    return info;
 }
 
 void  LinkState::HandlePacket(port_num portId, void* handleMe, unsigned short size) {
-    unordered_map<router_id, ls_path_info> newCostTable;
-    seq_num incomingSeqNum;
-    router_id incomingSourceId;
-    unordered_map<router_id, cost> incomingCostTable = DeserializeLSPacket(handleMe, incomingSourceId, incomingSeqNum);
-    
-    if (this->seqTable.find(incomingSourceId) == this->seqTable.end() || incomingSeqNum > this->seqTable[incomingSourceId]) {
+    ls_packet_info info = DeserializeLSPacket(handleMe);
+    unordered_map<router_id, cost> incomingCostTable = info.costTable;
+    seq_num incomingSeqNum = info.seqNum;
+    router_id incomingSourceId = info.sourceId;
+    if (this->seqTable.find(incomingSourceId) == this->seqTable.end() || (this->seqTable.find(incomingSourceId) != this->seqTable.end() && incomingSeqNum > this->seqTable[incomingSourceId])) {
         // if source id is not in table or incoming seq num is greater than current seq num
         this->seqTable[incomingSourceId] = incomingSeqNum;
-
+        this->RefreshNodeEntry(incomingSourceId);
         if (this->NeedCostUpdated(incomingSourceId, incomingCostTable)) {
             this->costTable[incomingSourceId] = incomingCostTable;
             this->UpdateTable();
         }
-        // send updates to all neighbors
-        this->SendUpdates();
+        // Send updates to all neighbors
+        this->FloodUpdates(portId, handleMe, size);
+    } else {
+        free(handleMe);
     }
 }
 
@@ -238,6 +248,13 @@ bool LinkState::PortExpiredCheck() {
             it->second.timeCost = INFINITY_COST;
             it->second.isUp = false;
             expired = true;
+            if (this->adjacencyList->find(it->second.destRouterID) != this->adjacencyList->end()) {
+                this->adjacencyList->erase(it->second.destRouterID);
+                this->removeNodeFromCostTable(it->second.destRouterID);
+                if (this->nodeTable.find(it->second.destRouterID) != this->nodeTable.end()) {
+                    this->nodeTable[it->second.destRouterID].timeCost = INFINITY_COST;
+                }
+            }
         }
     }
     return expired;
@@ -246,13 +263,21 @@ bool LinkState::PortExpiredCheck() {
 bool LinkState::NodeTableExpiredCheck() {
     unsigned int currTime = this->sys->time();
     bool expired = false;
-
-    for (auto it: this->nodeTable) {
+    router_id destId;
+    router_id sourceId;
+    auto it = this->nodeTable.begin();
+    
+    while (it != this->nodeTable.end()){
         currTime = this->sys->time();
-        if (currTime - it.second.lastUpdate >= 45 * 1000) {
+        ls_path_info& pathInfo = it->second;
+        if (currTime - pathInfo.lastUpdate >= 45 * 1000 && pathInfo.timeCost != INFINITY_COST) {
             expired = true;
-            this->nodeTable.erase(it.first);
-        }
+            destId = it->first;
+            sourceId = pathInfo.myID;
+            pathInfo.timeCost = INFINITY_COST;
+            this->removeNodeFromCostTable(destId);
+        } 
+        it++;
     }
     return expired;
 }
